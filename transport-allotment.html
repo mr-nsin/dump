@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transport allotment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1f2a44; --ink-2:#4a5568; --ink-3:#8792a2;
+  --line:#e3e7ed; --line-2:#cfd6df;
+  --canvas:#f3f5f8; --surface:#fff; --soft:#f8f9fb;
+  --primary:#1f2a44;
+  --teal:#0e7c86; --teal-bg:#e6f4f5;
+  --green:#15803d; --green-bg:#e8f6ed;
+  --amber:#b45309; --amber-bg:#fdf3e2;
+  --red:#c2410c; --red-bg:#fdece4;
+  --wa:#128c4a;
+  --r-lg:12px; --r:8px; --r-sm:6px;
+  font-family:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within{outline:2px solid var(--teal);outline-offset:2px}
+.app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+
+.top{display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
+.top h1{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.top .sub{color:var(--ink-3);font-size:13px}
+.top .spacer{flex:1}
+.channels{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line);border-radius:999px;background:var(--soft)}
+.channels .lbl{font-size:12px;color:var(--ink-3);padding:0 8px 0 10px}
+.chip-toggle{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-weight:600;font-size:13px;cursor:pointer;user-select:none;color:var(--ink-2)}
+.chip-toggle input{accent-color:var(--teal);width:15px;height:15px}
+.chip-toggle.on{background:var(--surface);box-shadow:0 0 0 1px var(--line-2)}
+.chip-toggle.on.wa{color:var(--wa)} .chip-toggle.on.em{color:var(--teal)}
+.pending-btn{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--amber-bg);color:var(--amber);font-weight:600;font-size:13px;border:1px solid #f3d9ad}
+.pending-btn .n{background:var(--amber);color:#fff;border-radius:999px;padding:0 7px;font-size:12px}
+.pending-btn[disabled]{background:var(--soft);color:var(--ink-3);border-color:var(--line);cursor:default}
+.pending-btn[disabled] .n{background:var(--ink-3)}
+
+.cols{display:grid;grid-template-columns:330px minmax(0,1fr) 340px;gap:14px;padding:14px;min-height:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel-head{padding:14px 16px 10px}
+.panel-title{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.panel-title .count{color:var(--ink-3);font-weight:500}
+.scroll{overflow:auto;min-height:0;flex:1}
+
+.search{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--soft);margin-top:10px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
+.tab{padding:5px 10px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--ink-2);border:1px solid var(--line)}
+.tab .c{color:var(--ink-3);font-weight:500;margin-left:3px}
+.tab.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tab.on .c{color:#c9d1e0}
+.row-tools{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}
+.row-tools select{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.selbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--soft);font-size:13px}
+.selbar label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.selbar input{width:15px;height:15px;accent-color:var(--primary)}
+.link{color:var(--teal);font-weight:600;font-size:13px}
+.person{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:start;padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;position:relative}
+.person:hover{background:var(--soft)}
+.person.sel{background:#f2f5fb}
+.person.sel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pc,var(--primary))}
+.person input{margin-top:9px;width:15px;height:15px;accent-color:var(--primary)}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;background:#e8ecf2;color:var(--ink-2);flex-shrink:0}
+.pname{font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pax{font-size:11.5px;font-weight:600;color:var(--ink-2);background:#eef1f5;border-radius:4px;padding:0 5px}
+.req{font-size:11.5px;font-weight:600;color:var(--teal);background:var(--teal-bg);border-radius:4px;padding:0 5px}
+.pmeta{font-size:12.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.palloc{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.palloc .leg{color:var(--ink-3)}
+.palloc .none{color:var(--amber)}
+.badge{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.b-un{background:#eef1f5;color:var(--ink-2)}
+.b-part,.b-pend,.b-upd{background:var(--amber-bg);color:var(--amber)}
+.b-ok{background:var(--green-bg);color:var(--green)}
+.b-new{background:var(--teal-bg);color:var(--teal)}
+.b-rem{background:var(--red-bg);color:var(--red)}
+.pstatus{margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.empty-list{padding:30px 16px;text-align:center;color:var(--ink-3)}
+
+.ws-empty{flex:1;display:grid;place-items:center;text-align:center;padding:40px;color:var(--ink-2)}
+.ws-empty h2{font-size:18px;margin-bottom:6px;color:var(--ink)}
+.ws-empty p{max-width:400px;margin:0 auto}
+.steps{display:flex;gap:18px;justify-content:center;margin-top:22px;font-size:13px;color:var(--ink-3);flex-wrap:wrap}
+.steps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#e8ecf2;color:var(--ink-2);font-size:11px;margin-right:6px}
+.section{padding:14px 18px;border-bottom:1px solid var(--line)}
+.section:last-child{border-bottom:0}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.sec-head h3{font-size:14px;font-weight:700}
+.sec-head .hint{font-size:12.5px;color:var(--ink-3)}
+.guests{display:flex;gap:8px;flex-wrap:wrap}
+.guest{display:flex;align-items:center;gap:9px;padding:7px 8px 7px 7px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--surface);min-width:190px;text-align:left}
+.guest.active{border-color:var(--pc);box-shadow:0 0 0 3px color-mix(in srgb,var(--pc) 18%,transparent)}
+.guest.off{opacity:.5}
+.guest .av{width:30px;height:30px;background:var(--pc);color:#fff}
+.guest .gn{font-weight:600;font-size:13px;line-height:1.2}
+.bar{height:5px;border-radius:3px;background:#eef1f5;margin-top:5px;overflow:hidden;width:110px}
+.bar i{display:block;height:100%;background:var(--pc)}
+.gcount{font-size:12px;color:var(--ink-3)}
+.guest .x{margin-left:auto;color:var(--ink-3);padding:2px 6px;border-radius:4px;font-size:16px;line-height:1}
+.guest .x:hover{background:#eef1f5;color:var(--ink)}
+.need{display:flex;align-items:center;gap:14px;margin-top:12px;padding:10px 12px;background:var(--soft);border-radius:var(--r);font-size:13px;flex-wrap:wrap}
+.need strong{font-size:15px}
+.need .ok{color:var(--green);font-weight:600}
+.need .warn{color:var(--amber);font-weight:600}
+.need .actions{margin-left:auto;display:flex;gap:8px}
+.btn{padding:8px 14px;border-radius:var(--r);font-weight:600;font-size:13px;border:1px solid var(--line-2);background:var(--surface);display:inline-flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn.teal:hover{background:#0b6a73}
+.btn.ghost-red{color:var(--red);border-color:#f3c9b6}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+
+.legs{display:flex;gap:6px;flex-wrap:wrap}
+.legbtn{padding:9px 14px;border-radius:var(--r);border:1.5px solid var(--line);text-align:left;min-width:170px}
+.legbtn b{display:block;font-size:13.5px}
+.legbtn span{font-size:12px;color:var(--ink-3)}
+.legbtn.on{border-color:var(--primary);background:#f5f7fb}
+.legbtn[disabled]{opacity:.45;cursor:not-allowed}
+.sched{display:grid;grid-template-columns:1fr 1fr 140px 110px;gap:8px;margin-top:12px}
+.sched label{font-size:12.5px;color:var(--ink-3);display:flex;flex-direction:column;gap:4px}
+.sched select,.sched input{padding:7px 9px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.sched-foot{display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.sched-foot label{display:flex;gap:6px;align-items:center;cursor:pointer;font-weight:600}
+.sched-foot input{accent-color:var(--primary)}
+.travel{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tchip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 4px;display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+.tchip:hover{border-color:var(--teal);color:var(--teal)}
+.tchip i{width:18px;height:18px;border-radius:50%;background:var(--pc);color:#fff;font-style:normal;font-size:9.5px;font-weight:700;display:grid;place-items:center}
+
+.vtools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.seg button{padding:6px 10px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.seg button.on{background:var(--soft);color:var(--ink);box-shadow:inset 0 -2px 0 var(--primary)}
+.legend{display:flex;gap:12px;margin-left:auto;font-size:12px;color:var(--ink-3);flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+
+.veh{border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;background:var(--surface)}
+.veh.open{border-color:var(--line-2);box-shadow:0 0 0 1px var(--line-2)}
+.veh.dim .vname,.veh.dim .vsub{opacity:.6}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:10px 12px;cursor:pointer;align-items:center}
+.vname{font-weight:700;font-size:14px}
+.vsub{font-size:12.5px;color:var(--ink-3)}
+.vright{display:flex;align-items:center;gap:8px}
+.vstat{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.s-free{background:var(--green-bg);color:var(--green)}
+.s-join{background:var(--teal-bg);color:var(--teal)}
+.s-busy,.s-full,.s-private,.s-dedonly,.s-shared{background:#eef1f5;color:var(--ink-2)}
+.s-busy{background:var(--red-bg);color:var(--red)}
+.vreason{grid-column:1/-1;font-size:12.5px;color:var(--ink-2)}
+.vreason.bad{color:var(--red)}
+.tl{grid-column:1/-1;position:relative;height:26px;background:var(--soft);border-radius:5px;border:1px solid var(--line)}
+.tl .hr{position:absolute;top:0;bottom:0;border-left:1px solid #e9edf2}
+.tl .hl{position:absolute;bottom:-15px;font-size:10px;color:var(--ink-3);transform:translateX(-50%)}
+.tl .blk{position:absolute;top:3px;bottom:3px;border-radius:4px;background:#c9d1dc;color:#fff;font-size:10.5px;font-weight:700;padding:0 5px;overflow:hidden;white-space:nowrap;line-height:18px}
+.tl .blk.batch{background:var(--pc)}
+.tl .blk.conf{background:var(--red)}
+.tl .win{position:absolute;top:-3px;bottom:-3px;border:2px dashed var(--ink);border-radius:5px;background:rgba(31,42,68,.06)}
+.tlwrap{grid-column:1/-1;padding-bottom:14px}
+.vbody{border-top:1px solid var(--line);padding:12px;background:var(--soft);border-radius:0 0 var(--r) var(--r)}
+.trip{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
+.trip:last-child{margin-bottom:0}
+.trip-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.trip-h b{font-size:13.5px}
+.trip-h .t{font-size:12.5px;color:var(--ink-3)}
+.seats{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:6px;max-width:520px}
+.seat{height:44px;border-radius:var(--r-sm);border:1.5px dashed var(--line-2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10.5px;color:var(--ink-3);background:var(--surface)}
+.seat svg{width:16px;height:16px}
+.seat.free:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+.seat.driver{border:0;background:transparent;cursor:default}
+.seat.mine{border:1.5px solid var(--pc);background:var(--pc);color:#fff;font-weight:700}
+.seat.mine.kept{background:color-mix(in srgb,var(--pc) 80%,#fff)}
+.seat.other{border:1.5px solid #dde2e9;background:#e8ecf1;color:var(--ink-2);cursor:not-allowed;font-weight:600}
+.seat.lock{cursor:not-allowed;opacity:.55}
+.plist{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.plist div{font-size:12.5px;display:flex;gap:8px;align-items:center;color:var(--ink-2)}
+.plist .dot{width:8px;height:8px;border-radius:50%;background:#c9d1dc;flex-shrink:0}
+.plist .you{font-size:11px;font-weight:600;color:var(--teal)}
+
+.chg{padding:10px 0;border-bottom:1px dashed var(--line)}
+.chg:last-child{border-bottom:0}
+.chg-h{display:flex;align-items:center;gap:8px}
+.chg-h .dot{width:9px;height:9px;border-radius:50%;background:var(--pc)}
+.chg-h b{font-size:13.5px;flex:1}
+.diff{font-size:12.5px;margin-top:5px;padding-left:17px;color:var(--ink-2)}
+.diff .lg{font-weight:600;color:var(--ink)}
+.diff .old{text-decoration:line-through;color:var(--ink-3)}
+.diff .arrow{color:var(--ink-3);margin:0 2px}
+.diff.warn{color:var(--amber)}
+.amt{padding-left:17px;font-size:12.5px;margin-top:4px;color:var(--ink-2)}
+.total{display:flex;justify-content:space-between;font-weight:700;padding-top:10px;margin-top:6px;border-top:1px solid var(--line)}
+.preview{background:#eaf6ef;border-radius:var(--r);padding:10px 12px;font-size:12.5px;color:#173d27;white-space:pre-line}
+.preview.email{background:var(--teal-bg);color:#0b3f44}
+.pv-tabs{display:flex;gap:6px;margin-bottom:8px}
+.muted{color:var(--ink-3);font-size:12.5px}
+.foot{padding:12px 16px;border-top:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.foot .explain{font-size:12px;color:var(--ink-3)}
+.foot .row{display:flex;gap:8px}
+.foot .row .btn{flex:1}
+.linkbtn{color:var(--teal);font-weight:600;font-size:12.5px;text-align:left}
+
+.modal-bg{position:fixed;inset:0;background:rgba(20,28,45,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--r-lg);width:min(660px,100%);max-height:86vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.modal-h h3{font-size:16px}
+.modal-b{padding:14px 18px;overflow:auto}
+.modal-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.modal-f .muted{margin-right:auto}
+pre.json{background:#1f2a44;color:#dbe4f3;font-size:12px;padding:14px;border-radius:var(--r);overflow:auto;line-height:1.5}
+.prow{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.prow input{margin-top:4px;accent-color:var(--primary)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:var(--r);font-size:13.5px;opacity:0;transition:.2s;pointer-events:none;z-index:30;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.x-close{font-size:20px;color:var(--ink-3);padding:0 6px}
+
+@media (max-width:1180px){.cols{grid-template-columns:300px minmax(0,1fr)}.summary{grid-column:1/-1}}
+@media (max-width:760px){.cols{grid-template-columns:1fr}.app{height:auto}.top{flex-wrap:wrap}.sched{grid-template-columns:1fr 1fr}.legend{margin-left:0}}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+/* workspace */
+.ws-empty{flex:1;display:grid;place-items:center;text-align:center;padding:40px;color:var(--ink-2)}
+.ws-empty .ill{width:84px;height:84px;border-radius:50%;background:var(--soft-2);display:grid;place-items:center;margin:0 auto 14px;color:var(--ink-3)}
+.ws-empty .ill svg{width:40px;height:40px}
+.ws-empty h2{font-size:18px;margin-bottom:6px;color:var(--ink)}
+.ws-empty p{max-width:380px;margin:0 auto}
+.sec{padding:16px 18px}
+.sticky{position:sticky;top:0;z-index:3;background:var(--surface);padding:14px 18px 12px;border-bottom:1px solid var(--line)}
+.sec+.sec{border-top:1px solid var(--line)}
+.sec-t{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.sec-t h3{font-size:14px;font-weight:700}
+.sec-t .hint{font-size:12.5px;color:var(--ink-3)}
+.batch{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mem{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border-radius:999px;background:var(--soft-2);font-size:13px;font-weight:600;border:1.5px solid transparent}
+.mem .av{width:26px;height:26px;font-size:10.5px;background:var(--pc);color:#fff}
+.mem .cnt{font-size:11.5px;font-weight:600;color:var(--ink-3)}
+.mem .cnt.done{color:var(--green)}
+.mem.active{background:var(--surface);border-color:var(--pc);box-shadow:0 0 0 3px color-mix(in srgb,var(--pc) 15%,transparent)}
+.mem.off{opacity:.45}
+.mem .x{color:var(--ink-3);margin-left:2px;font-size:15px;line-height:1;padding:0 2px}
+.prog{display:flex;align-items:center;gap:12px;margin-top:12px;font-size:13px;color:var(--ink-2)}
+.prog .track{flex:1;height:6px;border-radius:3px;background:var(--soft-2);overflow:hidden;display:flex}
+.prog .track i{height:100%}
+.prog b{color:var(--ink)}
+.tbtn{font-size:12.5px;font-weight:600;color:var(--ink-2);padding:4px 8px;border-radius:6px}
+.tbtn:hover{background:var(--soft-2)}
+.tbtn.red{color:var(--red)}
+.tbtn[disabled]{opacity:.4;cursor:not-allowed}
+
+.seg{display:inline-flex;background:var(--soft-2);border-radius:999px;padding:3px;gap:2px}
+.seg button{padding:7px 16px;border-radius:999px;font-weight:600;font-size:13px;color:var(--ink-2);display:flex;gap:6px;align-items:center}
+.seg button svg{width:15px;height:15px}
+.seg button .c{font-weight:500;color:var(--ink-3);font-size:12px}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(23,33,54,.1)}
+.seg button[disabled]{opacity:.4;cursor:not-allowed}
+
+.route{display:grid;grid-template-columns:1fr auto 1fr auto;align-items:center;gap:14px;margin-top:12px;padding:14px 16px;border-radius:var(--r-lg);background:var(--soft)}
+.rp .lbl{font-size:12px;color:var(--ink-3)}
+.rp b{display:block;font-size:15px}
+.rp .tm{font-size:13px;color:var(--ink-2)}
+.rp.end{text-align:right}
+.rline{display:flex;flex-direction:column;align-items:center;font-size:11.5px;color:var(--ink-3);min-width:90px}
+.rline i{display:block;width:100%;height:2px;background:repeating-linear-gradient(90deg,var(--line-2) 0 6px,transparent 6px 10px);margin-top:4px;position:relative}
+.rline i::after{content:"";position:absolute;right:-2px;top:-3px;border-left:6px solid var(--line-2);border-top:4px solid transparent;border-bottom:4px solid transparent}
+.editbtn{font-size:12.5px;font-weight:600;color:var(--teal);padding:6px 10px;border-radius:6px;background:var(--surface)}
+.rmeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;font-size:12.5px;color:var(--ink-2)}
+.tag{padding:2px 9px;border-radius:999px;background:var(--soft-2);font-weight:600;font-size:12px}
+.tag.ded{background:#ecebfd;color:#4338ca}
+.sched{display:grid;grid-template-columns:1fr 1fr 140px 110px;gap:8px;margin-top:10px}
+.sched label{font-size:12px;color:var(--ink-3);display:flex;flex-direction:column;gap:4px}
+.sched select,.sched input{padding:8px 9px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink)}
+.dedrow{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:13px;font-weight:600;cursor:pointer}
+.dedrow input{accent-color:var(--primary)}
+.travel{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:12px;color:var(--ink-3)}
+.tchip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 3px;display:flex;align-items:center;gap:6px;color:var(--ink-2);background:var(--surface)}
+.tchip:hover{border-color:var(--teal);color:var(--teal)}
+.tchip i{width:18px;height:18px;border-radius:50%;background:var(--pc);color:#fff;font-style:normal;font-size:9px;font-weight:700;display:grid;place-items:center}
+
+.vgroup{font-size:12.5px;font-weight:600;color:var(--ink-3);margin:14px 0 8px}
+.vgroup:first-child{margin-top:0}
+.vc{border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:8px;background:var(--surface);transition:border-color .15s}
+.vc:hover{border-color:var(--line-2)}
+.vc.open{border-color:var(--primary);box-shadow:0 4px 16px rgba(23,33,54,.07)}
+.vc.mine{border-color:color-mix(in srgb,var(--pc) 45%,var(--line))}
+.vc-top{display:flex;align-items:center;gap:12px;padding:11px 12px;cursor:pointer}
+.vic{width:40px;height:40px;border-radius:10px;background:var(--soft-2);display:grid;place-items:center;color:var(--ink-2)}
+.vic svg{width:24px;height:24px}
+.vc-main{flex:1;min-width:0}
+.vc-name{font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.plate{font-family:inherit;font-size:11px;font-weight:800;letter-spacing:.06em;background:var(--plate);color:#1a1a1a;padding:1px 6px;border-radius:4px;border:1px solid #d9b52c;white-space:nowrap}
+.vc-sub{font-size:12.5px;color:var(--ink-3);margin-top:1px}
+.vc-sub.bad{color:var(--red)}
+.dots{display:flex;gap:3px;flex-wrap:wrap;max-width:110px;justify-content:flex-end}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dots i.t{background:#a4aec0}
+.dots i.b{background:var(--pc)}
+.vstat{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.s-free{background:var(--green-bg);color:var(--green)}
+.s-join{background:var(--teal-bg);color:var(--teal)}
+.s-busy{background:var(--red-bg);color:var(--red)}
+.s-full,.s-private,.s-dedonly,.s-shared{background:var(--soft-2);color:var(--ink-2)}
+.chev{color:var(--ink-3);transition:transform .15s}
+.vc.open .chev{transform:rotate(180deg)}
+.btn{padding:8px 14px;border-radius:var(--r);font-weight:600;font-size:13px;border:1px solid var(--line-2);background:var(--surface);display:inline-flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
+.btn:hover{background:var(--soft)}
+.btn.dark{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.dark:hover{background:#2a3b66}
+.btn.teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn.teal:hover{background:#0b6a73}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:6px 11px;font-size:12.5px}
+.vc-body{padding:0 12px 12px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px}
+.vc-body h4{font-size:12.5px;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+.reason{grid-column:1/-1;font-size:13px;padding:8px 12px;border-radius:var(--r);background:var(--soft)}
+.reason.bad{background:var(--red-bg);color:var(--red)}
+.reason.good{background:var(--teal-bg);color:#0b5c63}
+.cabin{background:var(--soft);border-radius:18px 18px 12px 12px;padding:10px;display:grid;gap:6px;border:1px solid var(--line)}
+.seat{width:46px;height:42px;border-radius:9px 9px 6px 6px;border:1.5px dashed var(--line-2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--ink-3);background:var(--surface)}
+.seat.free:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+.seat.drv{border:0;background:transparent;cursor:default;font-weight:500}
+.seat.drv svg{width:18px;height:18px}
+.seat.gap{border:0;background:transparent}
+.seat.mine{border:0;background:var(--pc);color:#fff}
+.seat.mine.kept{background:color-mix(in srgb,var(--pc) 78%,#fff)}
+.seat.other{border:0;background:#dfe4ec;color:var(--ink-2);cursor:not-allowed}
+.seat.lock{cursor:not-allowed;opacity:.6}
+.seat small{font-weight:500;font-size:9.5px;opacity:.85}
+.day{display:flex;flex-direction:column;gap:6px}
+.dtrip{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:var(--r);background:var(--soft);font-size:12.5px}
+.dtrip.now{background:var(--teal-bg)}
+.dtrip.clash{background:var(--red-bg)}
+.dtrip .tm{font-weight:700;min-width:62px;color:var(--ink)}
+.dtrip .rt{color:var(--ink-2)}
+.dtrip .who{display:flex;margin-top:4px}
+.dtrip .who span{width:20px;height:20px;border-radius:50%;background:#c6cedb;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;margin-right:-5px;border:2px solid var(--soft)}
+.dtrip .cap{margin-left:auto;color:var(--ink-3);white-space:nowrap}
+.dempty{font-size:12.5px;color:var(--ink-3)}
+.mini{position:relative;height:8px;border-radius:4px;background:var(--soft-2);margin:4px 0 16px}
+.mini span{position:absolute;top:0;bottom:0;border-radius:4px;background:#b7c0cf}
+.mini span.c{background:var(--red)}
+.mini span.b{background:var(--pc)}
+.mini .win{top:-3px;bottom:-3px;background:transparent;border:2px dashed var(--ink);border-radius:5px}
+.mini .h{position:absolute;top:11px;font-size:10px;color:var(--ink-3);transform:translateX(-50%)}
+details.unav summary{list-style:none;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-3);margin:14px 0 8px;display:flex;gap:6px;align-items:center}
+details.unav summary::-webkit-details-marker{display:none}
+details.unav summary::before{content:"▸";transition:transform .15s}
+details.unav[open] summary::before{transform:rotate(90deg)}
+details.unav .vc{background:var(--soft)}
+
+
+:root{--plate:#f7d34a;--soft-2:#eff2f7;--r-xl:16px}
+.alerts{display:flex;flex-direction:column;gap:8px;background:#fffaf0}
+.alert{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.alert .av{width:28px;height:28px;font-size:10.5px;background:var(--pc);color:#fff}
+.alert div{flex:1}.alert b{display:block;color:var(--amber);font-size:13px}.alert span{color:var(--ink-2)}
+.best{font-size:11px;font-weight:700;color:#fff;background:var(--primary);border-radius:999px;padding:1px 8px}
+.offs{font-size:11.5px;font-weight:600;color:var(--ink-3)}
+.rmeta .travel{margin-top:0;margin-left:4px}
+.vc-top .btn.sm:not(.dark){background:var(--surface)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <button class="btn sm" aria-label="Back">←</button>
+    <div>
+      <h1>Transport allotment</h1>
+      <div class="sub">Tech Summit 2026 · Arrivals 14 Oct, departures 17 Oct</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="pending-btn" id="pendingBtn" title="Attendees whose transport changed after the last message"></button>
+    <div class="channels" role="group" aria-label="Notify via">
+      <span class="lbl">Notify via</span>
+      <label class="chip-toggle wa" id="waLbl"><input type="checkbox" id="chWa"> WhatsApp</label>
+      <label class="chip-toggle em" id="emLbl"><input type="checkbox" id="chEm"> Email</label>
+    </div>
+  </header>
+
+  <main class="cols">
+    <section class="panel" aria-label="Attendees">
+      <div class="panel-head">
+        <div class="panel-title">Attendees <span class="count" id="attCount"></span></div>
+        <input class="search" id="search" placeholder="Search name, email or ID">
+        <div class="tabs" id="tabs"></div>
+        <div class="row-tools"><select id="reqFilter"></select></div>
+      </div>
+      <div class="selbar">
+        <label><input type="checkbox" id="selAll"> Select all shown</label>
+        <span><b id="selCount">0</b> selected · <button class="link" id="clearSel">Clear</button></span>
+      </div>
+      <div class="scroll" id="list"></div>
+    </section>
+
+    <section class="panel" aria-label="Allocation" id="ws"></section>
+    <section class="panel summary" aria-label="Review and save" id="sum"></section>
+  </main>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= Dummy data ================= */
+const EVENT={id:'EVT-2026-TS'};
+const LOC=['Pune Airport','Pune Railway Station','Grand Hotel','Hotel Taj','Mumbai Residency','Event Venue (Expo Hall)'];
+const DUR={'Pune Airport|Grand Hotel':45,'Pune Airport|Hotel Taj':50,'Pune Airport|Mumbai Residency':20,'Pune Airport|Event Venue (Expo Hall)':60,
+  'Pune Railway Station|Grand Hotel':30,'Pune Railway Station|Hotel Taj':25,'Pune Railway Station|Mumbai Residency':40,'Pune Railway Station|Event Venue (Expo Hall)':45};
+const dur=(a,b)=>DUR[a+'|'+b]||DUR[b+'|'+a]||45;
+const BUFFER=30; // minutes a vehicle needs between trips
+
+const VEH=[
+ {id:'V1',name:'Swift Dzire',plate:'MH12 AB 1021',type:'Sedan',cap:4,rate:1800,driver:'Ramesh Pawar',phone:'+91 98220 40001'},
+ {id:'V2',name:'Toyota Innova',plate:'MH12 CD 4432',type:'SUV',cap:6,rate:2800,driver:'Suresh Kale',phone:'+91 98220 40002'},
+ {id:'V3',name:'Innova Crysta',plate:'MH14 EF 7788',type:'SUV',cap:6,rate:3200,driver:'Imran Shaikh',phone:'+91 98220 40003'},
+ {id:'V4',name:'Force Traveller',plate:'MH12 TT 1200',type:'Tempo traveller',cap:12,rate:5500,driver:'Dinesh More',phone:'+91 98220 40004'},
+ {id:'V5',name:'BMW 5 Series',plate:'MH01 BMW 0121',type:'Luxury',cap:4,rate:6000,driver:'Anil Jadhav',phone:'+91 98220 40005',dedOnly:true},
+ {id:'V6',name:'Volvo coach',plate:'MH04 BUS 0909',type:'Bus',cap:20,rate:9000,driver:'Prakash Gaikwad',phone:'+91 98220 40006'},
+ {id:'V7',name:'Maruti Ertiga',plate:'MH12 GH 5566',type:'MUV',cap:6,rate:2200,driver:'Vijay Shinde',phone:'+91 98220 40007'},
+ {id:'V8',name:'Honda City',plate:'MH12 JK 9012',type:'Sedan',cap:4,rate:2000,driver:'Sachin Patil',phone:'+91 98220 40008'},
+];
+const veh=id=>VEH.find(v=>v.id===id);
+const toMin=t=>{const [h,m]=t.split(':').map(Number);return h*60+m};
+const toHM=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+const fmt12=m=>{const h=Math.floor(m/60),mm=String(m%60).padStart(2,'0');return `${(h%12)||12}:${mm} ${h<12?'am':'pm'}`};
+const fmtDate=d=>new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+
+let TRIPS=[
+ {id:'T1',vehicleId:'V2',leg:'arrival',date:'2026-10-14',start:toMin('09:30'),pickup:'Pune Airport',drop:'Grand Hotel'},
+ {id:'T2',vehicleId:'V5',leg:'arrival',date:'2026-10-14',start:toMin('11:00'),pickup:'Pune Airport',drop:'Grand Hotel',dedicated:true},
+ {id:'T3',vehicleId:'V6',leg:'arrival',date:'2026-10-14',start:toMin('13:00'),pickup:'Pune Railway Station',drop:'Event Venue (Expo Hall)'},
+ {id:'T4',vehicleId:'V1',leg:'arrival',date:'2026-10-14',start:toMin('08:00'),pickup:'Pune Railway Station',drop:'Hotel Taj'},
+ {id:'T5',vehicleId:'V1',leg:'arrival',date:'2026-10-14',start:toMin('12:00'),pickup:'Pune Airport',drop:'Hotel Taj'},
+ {id:'T6',vehicleId:'V4',leg:'departure',date:'2026-10-17',start:toMin('16:00'),pickup:'Grand Hotel',drop:'Pune Airport'},
+ {id:'T7',vehicleId:'V3',leg:'arrival',date:'2026-10-14',start:toMin('09:45'),pickup:'Pune Airport',drop:'Mumbai Residency'},
+ {id:'T8',vehicleId:'V7',leg:'arrival',date:'2026-10-14',start:toMin('10:00'),pickup:'Pune Airport',drop:'Grand Hotel'},
+];
+const trip=id=>TRIPS.find(t=>t.id===id);
+const tEnd=t=>t.start+dur(t.pickup,t.drop);
+const SK=(t,...n)=>n.map(x=>`${t}|${x}`);
+
+const ARR=(pt,time)=>({pt,date:'2026-10-14',time});
+const DEP=(pt,time)=>({pt,date:'2026-10-17',time});
+let ATT=[
+ ['A-1001','Aditya Deshmukh',5,'both','Grand Hotel',ARR('Pune Airport','09:05'),DEP('Pune Airport','19:30'),{arrival:SK('T1',1,2,3,4,5),departure:SK('T6',1,2,3,4,5)},1,1],
+ ['A-1002','Gaurav Tangariya',1,'both','Grand Hotel',ARR('Pune Airport','09:10'),DEP('Pune Airport','20:00'),{arrival:SK('T1',6),departure:[]},1,1],
+ ['A-1003','Priya Singh',4,'arrival','Grand Hotel',ARR('Pune Airport','10:30'),null,{arrival:SK('T2',1,2,3,4)},1,1],
+ ['A-1004','Amit Patel',1,'arrival','Grand Hotel',ARR('Pune Railway Station','12:40'),null,{arrival:SK('T3',1)},1,1],
+ ['A-1005','Neha Gupta',2,'arrival','Grand Hotel',ARR('Pune Railway Station','12:30'),null,{arrival:SK('T3',2,3)},1,1],
+ ['A-1006','Vikram Verma',1,'arrival','Hotel Taj',ARR('Pune Railway Station','12:45'),null,{arrival:SK('T3',4)},1,1],
+ ['A-1007','Ananya Rao',2,'both','Hotel Taj',ARR('Pune Railway Station','07:40'),DEP('Pune Railway Station','18:00'),{arrival:SK('T4',1,2),departure:[]},2,1],
+ ['A-1008','Varun Sethi',1,'arrival','Hotel Taj',ARR('Pune Airport','11:35'),null,{arrival:SK('T5',1)},1,1],
+ ['A-1009','Rahul Verma',2,'both','Grand Hotel',ARR('Pune Airport','09:20'),DEP('Pune Airport','19:45'),{arrival:[],departure:SK('T6',6,7)},1,1],
+ ['A-1010','Nikhil Bansal',2,'arrival','Mumbai Residency',ARR('Pune Airport','09:15'),null,{arrival:SK('T7',1,2)},1,1],
+ ['A-1011','Tanya Sharma',1,'arrival','Mumbai Residency',ARR('Pune Airport','09:25'),null,{arrival:SK('T7',3)},2,1],
+ ['A-1012','Rohan Mehta',2,'both','Grand Hotel',ARR('Pune Airport','09:35'),DEP('Pune Airport','19:30'),{arrival:SK('T8',1,2),departure:[]},1,1],
+ ['A-1013','Sneha Iyer',1,'both','Grand Hotel',ARR('Pune Airport','09:00'),DEP('Pune Airport','19:00'),{arrival:[],departure:[]},0,0],
+ ['A-1014','Karan Malhotra',3,'both','Grand Hotel',ARR('Pune Airport','09:15'),DEP('Pune Airport','20:15'),{arrival:[],departure:[]},0,0],
+ ['A-1015','Arjun Nair',2,'arrival','Grand Hotel',ARR('Pune Airport','09:40'),null,{arrival:[]},0,0],
+ ['A-1016','Meera Joshi',1,'departure','Hotel Taj',null,DEP('Pune Railway Station','17:30'),{departure:[]},0,0],
+ ['A-1017','Siddharth Jain',1,'both','Hotel Taj',ARR('Pune Railway Station','07:50'),DEP('Pune Airport','21:00'),{arrival:[],departure:[]},0,0],
+ ['A-1018','Kavya Pillai',3,'both','Mumbai Residency',ARR('Pune Airport','14:10'),DEP('Pune Airport','18:40'),{arrival:[],departure:[]},0,0],
+ ['A-1019','Farhan Qureshi',2,'arrival','Grand Hotel',ARR('Pune Airport','10:05'),null,{arrival:[]},0,0],
+ ['A-1020','Isha Kapoor',5,'both','Grand Hotel',ARR('Pune Airport','15:20'),DEP('Pune Airport','19:30'),{arrival:[],departure:[]},0,0],
+ ['A-1021','Zoya Khan',2,'arrival','Hotel Taj',ARR('Pune Airport','11:40'),null,{arrival:[]},0,0],
+ ['A-1022','Manish Tiwari',1,'departure','Grand Hotel',null,DEP('Pune Airport','19:50'),{departure:[]},0,0],
+].map(([id,name,pax,req,hotel,arr,dep,saved,version,notifiedVersion])=>({
+  id,name,pax,req,hotel,arr,dep,version,notifiedVersion,
+  email:name.split(' ')[0].toLowerCase()+name.split(' ')[1][0].toLowerCase()+'@yopmail.com',
+  phone:'+91 98200 1'+id.slice(-4),
+  saved:{arrival:saved.arrival||[],departure:saved.departure||[]}
+}));
+const byId=id=>ATT.find(a=>a.id===id);
+const needs=(a,leg)=>a.req==='both'||a.req===leg;
+const legsOf=a=>['arrival','departure'].filter(l=>needs(a,l));
+const LEG_NAME={arrival:'Arrival',departure:'Departure'};
+const REQ_NAME={arrival:'Arrival',departure:'Departure',both:'Round trip'};
+
+/* ================= State ================= */
+const PALETTE=['#4f46e5','#0891b2','#059669','#d97706','#db2777','#7c3aed','#dc2626','#0d9488','#65a30d','#9333ea'];
+const S={selected:[],draft:{},active:null,leg:'arrival',
+  sch:{arrival:null,departure:null},schTouched:{arrival:false,departure:false},
+  open:null,vShow:'all',tab:'all',q:'',req:'all',ch:{wa:false,em:true},pvTab:'wa'};
+let newTripSeq=1;
+const color=id=>PALETTE[Math.max(0,S.selected.indexOf(id))%PALETTE.length];
+const initials=n=>n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const first=n=>n.split(' ')[0];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sameSet=(a,b)=>a.length===b.length&&[...a].sort().join()===[...b].sort().join();
+const seatsOf=(a,leg)=>S.draft[a.id]?S.draft[a.id][leg]:a.saved[leg];
+
+function occ(){const m={};ATT.forEach(a=>['arrival','departure'].forEach(l=>seatsOf(a,l).forEach(k=>m[k]=a.id)));return m;}
+function tripOcc(t,o){const r=[];for(let n=1;n<=veh(t.vehicleId).cap;n++){const k=t.id+'|'+n;if(o[k])r.push({k,n,who:o[k]})}return r;}
+function cleanDraftTrips(){const o=occ();TRIPS=TRIPS.filter(t=>!t.draft||tripOcc(t,o).length);}
+
+function status(a){
+  if(a.version>a.notifiedVersion) return 'pending';
+  const legs=legsOf(a),got=legs.map(l=>a.saved[l].length);
+  if(got.every(g=>g===0)) return 'un';
+  if(legs.some((l,i)=>got[i]<a.pax)) return 'part';
+  return 'ok';
+}
+const STATUS_LABEL={pending:'Changed · not notified',un:'Not allotted',part:'Partly allotted',ok:'Notified'};
+const STATUS_CLASS={pending:'b-pend',un:'b-un',part:'b-part',ok:'b-ok'};
+
+function seatText(keys){
+  if(!keys.length) return null;
+  const g={};keys.forEach(k=>{const [tid,n]=k.split('|');(g[tid]=g[tid]||[]).push(+n)});
+  return Object.entries(g).map(([tid,ns])=>{const t=trip(tid),v=veh(t.vehicleId);
+    return `${v.name} (${v.plate}) · ${fmtDate(t.date)} ${fmt12(t.start)} · Seat ${ns.sort((a,b)=>a-b).join(', ')}`}).join(' + ');
+}
+function legChange(a,leg){
+  const d=S.draft[a.id];if(!d||!needs(a,leg)) return 'unchanged';
+  const o=a.saved[leg],n=d[leg];
+  if(sameSet(o,n)) return 'unchanged';
+  if(!o.length) return 'create'; if(!n.length) return 'remove'; return 'update';
+}
+function change(a){
+  const legs=legsOf(a).filter(l=>legChange(a,l)!=='unchanged');
+  if(!legs.length) return {action:'unchanged',legs};
+  const acts=legs.map(l=>legChange(a,l));
+  const allNew=legsOf(a).every(l=>!a.saved[l].length);
+  return {action:allNew?'create':acts.every(x=>x==='remove')&&legsOf(a).every(l=>!S.draft[a.id][l].length)?'remove':'update',legs};
+}
+function payable(a,keysByLeg){
+  let sum=0;
+  ['arrival','departure'].forEach(l=>{const g={};(keysByLeg[l]||[]).forEach(k=>{const tid=k.split('|')[0];g[tid]=(g[tid]||0)+1});
+    Object.entries(g).forEach(([tid,c])=>{const t=trip(tid),v=veh(t.vehicleId);sum+=t.dedicated?v.rate:Math.round(v.rate/v.cap*c)})});
+  return sum;
+}
+const inr=n=>'₹'+n.toLocaleString('en-IN');
+
+/* ================= Schedule ================= */
+function schFrom(a,leg){
+  if(leg==='arrival'&&a.arr){const t=Math.ceil((toMin(a.arr.time)+30)/15)*15;return {date:a.arr.date,time:toHM(t),pickup:a.arr.pt,drop:a.hotel,dedicated:false};}
+  if(leg==='departure'&&a.dep){const t=Math.floor((toMin(a.dep.time)-180)/15)*15;return {date:a.dep.date,time:toHM(t),pickup:a.hotel,drop:a.dep.pt,dedicated:false};}
+  return null;
+}
+function openForActive(){
+  const a=byId(S.active);if(!a) return;
+  const k=S.draft[a.id][S.leg][0];S.open=k?trip(k.split('|')[0]).vehicleId:S.open;
+}
+
+/* ================= Vehicle status ================= */
+function vStatus(v,o){
+  const sc=S.sch[S.leg];if(!sc) return {kind:'none'};
+  const st=toMin(sc.time),en=st+dur(sc.pickup,sc.drop);
+  const trips=TRIPS.filter(t=>t.vehicleId===v.id&&t.date===sc.date&&tripOcc(t,o).length);
+  const match=trips.find(t=>t.leg===S.leg&&t.pickup===sc.pickup&&t.drop===sc.drop&&Math.abs(t.start-st)<=30);
+  const conflicts=trips.filter(t=>t!==match&&t.start-BUFFER<en&&tEnd(t)+BUFFER>st);
+  if(conflicts.length) return {kind:'busy',conflicts,trips};
+  if(match){
+    const oc=tripOcc(match,o),others=[...new Set(oc.map(x=>x.who))].filter(w=>!S.draft[w]);
+    if(match.dedicated&&others.length) return {kind:'private',trip:match,trips};
+    if(sc.dedicated&&others.length) return {kind:'shared',trip:match,trips};
+    const free=v.cap-oc.length;
+    if(!free&&!oc.some(x=>S.draft[x.who])) return {kind:'full',trip:match,trips};
+    return {kind:'join',trip:match,free,trips};
+  }
+  if(v.dedOnly&&!sc.dedicated) return {kind:'dedonly',trips};
+  return {kind:'free',trips};
+}
+const usable=k=>k==='join'||k==='free';
+function statusText(s,v){
+  const sc=S.sch[S.leg];
+  switch(s.kind){
+    case 'free':return ['Free at '+fmt12(toMin(sc.time)),`No trip clashes. Picking a seat creates a new ${sc.dedicated?'dedicated ':''}trip.`];
+    case 'join':return [`Same trip · ${s.free} free`,`Already running ${fmt12(s.trip.start)} ${s.trip.pickup} → ${s.trip.drop}. New passengers join this trip.`];
+    case 'busy':{const c=s.conflicts[0];const w=tripOcc(c,occ()).map(x=>byId(x.who).name);
+      return ['Busy',`On another trip ${fmt12(c.start)}–${fmt12(tEnd(c))}, ${c.pickup} → ${c.drop} (${[...new Set(w)].join(', ')}). Needs ${BUFFER} min gap between trips.`];}
+    case 'full':return ['Full',`Trip at ${fmt12(s.trip.start)} has all ${v.cap} seats taken.`];
+    case 'private':return ['Dedicated to someone else',`Booked as a private trip at ${fmt12(s.trip.start)}. It can't be shared.`];
+    case 'shared':return ['Shared trip running',`A shared trip already uses this vehicle at ${fmt12(s.trip.start)}. Dedicated needs an empty vehicle.`];
+    case 'dedonly':return ['Dedicated only',`This vehicle only runs private trips. Tick "Dedicated vehicle" above to use it.`];
+  }
+  return ['',''];
+}
+
+/* ================= Render: list ================= */
+function visible(){
+  const q=S.q.trim().toLowerCase();
+  return ATT.filter(a=>(S.tab==='all'||status(a)===S.tab)&&(S.req==='all'||a.req===S.req)&&(!q||(a.name+' '+a.email+' '+a.id).toLowerCase().includes(q)));
+}
+function renderList(){
+  const counts={all:ATT.length,un:0,part:0,pending:0,ok:0};ATT.forEach(a=>counts[status(a)]++);
+  document.getElementById('attCount').textContent=`(${ATT.length})`;
+  document.getElementById('tabs').innerHTML=[['all','All'],['un','Not allotted'],['part','Partly'],['pending','Changed'],['ok','Notified']]
+    .map(([k,l])=>`<button class="tab ${S.tab===k?'on':''}" data-tab="${k}">${l}<span class="c">${counts[k]}</span></button>`).join('');
+  const rf=document.getElementById('reqFilter');
+  rf.innerHTML=`<option value="all">All requirements</option><option value="arrival">Arrival only</option><option value="departure">Departure only</option><option value="both">Round trip</option>`;rf.value=S.req;
+  const list=visible();
+  document.getElementById('list').innerHTML=list.length?list.map(a=>{
+    const sel=S.selected.includes(a.id),st=status(a),c=S.draft[a.id]&&change(a);
+    const lines=legsOf(a).map(l=>{const t=seatText(seatsOf(a,l));return `<div class="palloc"><span class="leg">${LEG_NAME[l]}:</span> ${t?esc(t):'<span class="none">not allotted</span>'}</div>`}).join('');
+    return `<div class="person ${sel?'sel':''}" data-id="${a.id}" style="${sel?'--pc:'+color(a.id):''}">
+      <input type="checkbox" ${sel?'checked':''} aria-label="Select ${esc(a.name)}">
+      <div class="av" style="${sel?`background:${color(a.id)};color:#fff`:''}">${initials(a.name)}</div>
+      <div style="min-width:0"><div class="pname">${esc(a.name)} <span class="pax">${a.pax} ${a.pax>1?'people':'person'}</span><span class="req">${REQ_NAME[a.req]}</span></div>
+      <div class="pmeta">${a.id} · ${esc(a.email)}</div>${lines}
+      <div class="pstatus"><span class="badge ${STATUS_CLASS[st]}">${STATUS_LABEL[st]}</span>${c&&c.action!=='unchanged'?'<span class="badge b-new">Unsaved edit</span>':''}</div></div></div>`;
+  }).join(''):`<div class="empty-list">No attendees match. Clear the search or pick another tab.</div>`;
+  const allSel=list.length&&list.every(a=>S.selected.includes(a.id)),sa=document.getElementById('selAll');
+  sa.checked=allSel;sa.indeterminate=!allSel&&list.some(a=>S.selected.includes(a.id));
+  document.getElementById('selCount').textContent=S.selected.length;
+}
+
+/* ================= Render: workspace ================= */
+const IC={
+ car:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15.5V11l1.8-4.2A2 2 0 0 1 8.6 5.5h6.8a2 2 0 0 1 1.8 1.3L19 11v4.5"/><path d="M3.5 11h17v4.5h-17z"/><circle cx="7.5" cy="15.5" r="1.6"/><circle cx="16.5" cy="15.5" r="1.6"/></svg>',
+ van:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V7a2 2 0 0 1 2-2h10l5 5v6z"/><path d="M3 10h17M9 5v5"/><circle cx="7" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/></svg>',
+ bus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="13" rx="2"/><path d="M4 10h16M8 16.5V19M16 16.5V19"/><circle cx="8" cy="13.3" r=".8"/><circle cx="16" cy="13.3" r=".8"/></svg>',
+ arrival:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5.5 13.5 3 8l2-.6 3 3.4 4.3-1.3L9.5 3.2l2.2-.6 5.2 6.3 3.4-1a1.8 1.8 0 0 1 1 3.4L7.6 15.2z"/></svg>',
+ departure:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M4.5 14.5 2.5 9l2-.4 2.6 3.3 4.4-.9-2.4-6.4 2.2-.4 4.5 6.7 3.5-.8a1.8 1.8 0 0 1 .8 3.5L6 16.3z"/></svg>',
+ wheel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/><path d="M12 4v6M5 14l5-1M19 14l-5-1"/></svg>',
+ chev:'<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>'
+};
+const vIcon=v=>v.cap>=12?IC.bus:v.cap>=6?IC.van:IC.car;
+const plate=v=>`<span class="plate">${v.plate}</span>`;
+const DAY0=6*60,DAY1=22*60,pct=m=>Math.max(0,Math.min(100,(m-DAY0)/(DAY1-DAY0)*100));
+/* ---------- workspace ---------- */
+function cabin(v,t,o,editable){
+  const by={};if(t)tripOcc(t,o).forEach(x=>by[x.n]=x.who);
+  const cols=v.cap>=12?4:3,act=byId(S.active);
+  const cell=n=>{const who=by[n];
+    if(!who) return editable?`<button class="seat free" data-seat="${v.id}|${n}" title="Seat ${n} · free">${n}</button>`:`<div class="seat lock">${n}</div>`;
+    const w=byId(who);
+    if(S.draft[who]){const kept=Object.values(w.saved).flat().includes(t.id+'|'+n);
+      return editable?`<button class="seat mine ${kept?'kept':''}" data-seat="${v.id}|${n}" style="--pc:${color(who)}" title="Seat ${n} · ${esc(w.name)}, click to free">${initials(w.name)}<small>${n}</small></button>`
+        :`<div class="seat mine lock" style="--pc:${color(who)}">${initials(w.name)}<small>${n}</small></div>`;}
+    return `<div class="seat other" title="Seat ${n} · ${esc(w.name)}">${initials(w.name)}<small>${n}</small></div>`;};
+  let rows=`<div style="display:grid;grid-template-columns:repeat(${cols},46px);gap:6px"><div class="seat drv" title="Driver ${esc(v.driver)}">${IC.wheel}</div>${'<div class="seat gap"></div>'.repeat(cols-2)}${cell(1)}</div>`;
+  let n=2;while(n<=v.cap){let r='';for(let c=0;c<cols&&n<=v.cap;c++,n++)r+=cell(n);rows+=`<div style="display:grid;grid-template-columns:repeat(${cols},46px);gap:6px">${r}</div>`;}
+  return `<div class="cabin">${rows}</div>`;
+}
+function dots(v,t,o){
+  const by={};if(t)tripOcc(t,o).forEach(x=>by[x.n]=x.who);
+  let h='';for(let n=1;n<=v.cap;n++){const w=by[n];h+=w?(S.draft[w]?`<i class="b" style="--pc:${color(w)}"></i>`:'<i class="t"></i>'):'<i></i>';}
+  return `<div class="dots" title="${t?tripOcc(t,o).length:0} of ${v.cap} seats taken">${h}</div>`;
+}
+function daySchedule(v,s,o){
+  const sc=S.sch[S.leg],st=toMin(sc.time),en=st+dur(sc.pickup,sc.drop),conf=new Set((s.conflicts||[]).map(t=>t.id));
+  const trips=(s.trips||[]).slice().sort((a,b)=>a.start-b.start);
+  const bar=`<div class="mini">${trips.map(t=>{const b=tripOcc(t,o).find(x=>S.draft[x.who]);
+      return `<span class="${conf.has(t.id)?'c':b?'b':''}" style="left:${pct(t.start)}%;width:${pct(tEnd(t))-pct(t.start)}%;${b?'--pc:'+color(b.who):''}"></span>`}).join('')}
+    <span class="win" style="left:${pct(st)}%;width:${Math.max(1,pct(en)-pct(st))}%"></span>
+    ${[8,12,16,20].map(h=>`<span class="h" style="left:${pct(h*60)}%">${(h%12)||12}${h<12?'am':'pm'}</span>`).join('')}</div>`;
+  const list=trips.map(t=>{const oc=tripOcc(t,o),who=[...new Set(oc.map(x=>x.who))],isNow=s.trip&&s.trip.id===t.id;
+    return `<div class="dtrip ${conf.has(t.id)?'clash':isNow?'now':''}"><span class="tm">${fmt12(t.start)}</span>
+      <div><div class="rt">${esc(t.pickup)} → ${esc(t.drop)}${t.dedicated?' · private':''}</div>
+      <div class="who">${who.map(w=>`<span style="${S.draft[w]?'background:'+color(w):''}" title="${esc(byId(w).name)}">${initials(byId(w).name)}</span>`).join('')}</div></div>
+      <span class="cap">${oc.length}/${v.cap}</span></div>`}).join('');
+  return bar+(list?`<div class="day">${list}</div>`:`<div class="dempty">Nothing booked on ${fmtDate(sc.date)}.</div>`);
+}
+function vehCard(v,s,o,best){
+  const [lbl,why]=statusText(s,v),open=S.open===v.id,ok=usable(s.kind),act=byId(S.active);
+  const t=s.trip||null,hasBatch=(s.trips||[]).some(x=>tripOcc(x,o).some(y=>S.draft[y.who]));
+  const firstBatch=hasBatch&&(s.trips||[]).map(x=>tripOcc(x,o).find(y=>S.draft[y.who])).find(Boolean);
+  const canMove=ok&&act&&needs(act,S.leg),sc=S.sch[S.leg];
+  let offset='';if(s.kind==='join'){const d=s.trip.start-toMin(sc.time);if(d)offset=` Leaves ${Math.abs(d)} min ${d<0?'earlier':'later'} than ${fmt12(toMin(sc.time))}.`;}
+  const sub=ok?`${v.cap} seats · ${inr(v.rate)}/trip · ${esc(v.driver)}`:esc(why);
+  let body='';
+  if(open){
+    const seatsTitle=s.kind==='join'?`Seats on the ${fmt12(t.start)} trip`:s.kind==='free'?'Seats on a new trip':'Seats';
+    body=`<div class="vc-body">
+      ${ok?`<div class="reason good">${esc(why+offset)}</div>`:`<div class="reason bad">${esc(why)}</div>`}
+      <div><h4>${seatsTitle}</h4>${cabin(v,ok?t:(s.conflicts&&s.conflicts[0])||t,o,ok)}</div>
+      <div><h4>Booked on ${fmtDate(sc.date)}</h4>${daySchedule(v,s,o)}</div></div>`;
+  }
+  return `<div class="vc ${open?'open':''} ${hasBatch?'mine':''}" style="${firstBatch?'--pc:'+color(firstBatch.who):''}">
+    <div class="vc-top" data-open="${v.id}" role="button" aria-expanded="${open}">
+      <div class="vic">${vIcon(v)}</div>
+      <div class="vc-main"><div class="vc-name">${v.name} ${plate(v)}${best?'<span class="best">Best fit</span>':''}</div><div class="vc-sub ${ok?'':s.kind==='busy'?'bad':''}">${sub}</div></div>
+      ${ok&&!open?dots(v,t,o):''}
+      <span class="vstat s-${s.kind}">${lbl}</span>${s.kind==='join'&&offset?`<span class="offs" title="${esc(offset.trim())}">${fmt12(s.trip.start)}</span>`:''}
+      ${canMove?`<button class="btn sm ${best?'dark':''}" data-move="${v.id}">${sc.dedicated?`Book for ${esc(first(act.name))}`:'Move batch here'}</button>`:''}
+      ${IC.chev}</div>${body}</div>`;
+}
+/* ---------- Improved middle panel ---------- */
+Object.assign(S,{editSch:false});
+// Prefer the trip the batch is already on, so the schedule matches what's booked
+function schFromTrip(t){return {date:t.date,time:toHM(t.start),pickup:t.pickup,drop:t.drop,dedicated:!!t.dedicated};}
+function initSch(){
+  ['arrival','departure'].forEach(l=>{
+    if(S.schTouched[l]&&S.sch[l]) return;
+    const ids=[S.active,...S.selected].filter(Boolean);
+    const booked=ids.map(id=>S.draft[id]&&S.draft[id][l][0]).find(Boolean);
+    if(booked){S.sch[l]=schFromTrip(trip(booked.split('|')[0]));return;}
+    const src=ids.map(byId).find(a=>a&&needs(a,l));
+    S.sch[l]=src?schFrom(src,l):null;
+  });
+  if(!S.selected.some(id=>needs(byId(id),S.leg))) S.leg=S.selected.some(id=>needs(byId(id),'arrival'))?'arrival':'departure';
+}
+// Add missing seats for one attendee on the trip they're already on
+function fillRest(id){
+  const a=byId(id),d=S.draft[id][S.leg];if(!d.length) return;
+  const t=trip(d[0].split('|')[0]),v=veh(t.vehicleId),o=occ();
+  let r=a.pax-d.length,added=0;
+  for(let n=1;n<=v.cap&&r>0;n++){const k=t.id+'|'+n;if(!o[k]){d.push(k);r--;added++;}}
+  toast(r?`Only ${added} seat${added===1?'':'s'} left on ${v.name}. Move ${first(a.name)}'s group to a bigger vehicle.`:`Added ${added} seat${added>1?'s':''} for ${a.name} on ${v.name}`);
+  render();
+}
+function bestFit(all,o){
+  const leg=S.leg,ids=S.selected.filter(id=>needs(byId(id),leg));
+  const rem=ids.reduce((s,id)=>s+remaining(id,leg),0);if(!rem) return null;
+  const need=ids.reduce((s,id)=>s+byId(id).pax,0);
+  // seats that the whole batch could use on this vehicle if moved there
+  const cap=x=>{if(!usable(x.s.kind))return -1;if(x.s.kind==='free')return x.v.cap;
+    const oc=tripOcc(x.s.trip,o);return x.v.cap-oc.filter(y=>!S.draft[y.who]).length;};
+  const fits=all.filter(x=>cap(x)>=need).sort((a,b)=>(a.s.kind==='join'?0:1)-(b.s.kind==='join'?0:1)||cap(a)-cap(b));
+  return fits[0]?fits[0].v.id:null;
+}
+function renderWs(){
+  const ws=document.getElementById('ws');
+  if(!S.selected.length){
+    ws.innerHTML=`<div class="ws-empty"><div><div class="ill">${IC.van}</div><h2>Who needs a ride?</h2>
+      <p>Tick one or more attendees on the left. Their flight or train times fill in the pickup, and each vehicle shows what it's already booked for.</p></div></div>`;return;
+  }
+  const o=occ(),leg=S.leg,sc=S.sch[leg];
+  const inLeg=S.selected.filter(id=>needs(byId(id),leg));
+  const need=inLeg.reduce((s,id)=>s+byId(id).pax,0),got=inLeg.reduce((s,id)=>s+S.draft[id][leg].length,0);
+
+  const mems=S.selected.map(id=>{const a=byId(id),on=needs(a,leg),n=S.draft[id][leg].length;
+    return `<button class="mem ${id===S.active?'active':''} ${on?'':'off'}" data-guest="${id}" style="--pc:${color(id)}" title="${on?`${n} of ${a.pax} seats`:`No ${leg} needed`}">
+      <span class="av">${initials(a.name)}</span>${esc(first(a.name))}<span class="cnt ${on&&n>=a.pax?'done':''}">${on?`${n}/${a.pax}`:'—'}</span>
+      <span class="x" data-unsel="${id}" aria-label="Remove ${esc(a.name)}">×</span></button>`}).join('');
+  const track=inLeg.map(id=>`<i style="width:${need?S.draft[id][leg].length/need*100:0}%;background:${color(id)}"></i>`).join('');
+  const legBtns=['arrival','departure'].map(l=>{const ids=S.selected.filter(id=>needs(byId(id),l));
+    const g=ids.reduce((s,id)=>s+S.draft[id][l].length,0),nd=ids.reduce((s,id)=>s+byId(id).pax,0);
+    return `<button class="${S.leg===l?'on':''}" data-leg="${l}" ${ids.length?'':'disabled'}>${IC[l]}${LEG_NAME[l]} <span class="c">${ids.length?`${g}/${nd}`:'—'}</span></button>`}).join('');
+
+  // people who are on a vehicle but short of seats
+  const short=inLeg.filter(id=>{const d=S.draft[id][leg];return d.length&&d.length<byId(id).pax;});
+  const shortHtml=short.map(id=>{const a=byId(id),d=S.draft[id][leg],t=trip(d[0].split('|')[0]),v=veh(t.vehicleId);
+    const free=v.cap-tripOcc(t,o).length,r=a.pax-d.length;
+    return `<div class="alert"><span class="av" style="--pc:${color(id)}">${initials(a.name)}</span>
+      <div><b>${esc(a.name)} needs ${r} more seat${r>1?'s':''}</b><span>${d.length} of ${a.pax} seated on ${v.name}, ${fmt12(t.start)}. ${free?`${free} free there.`:'No seats left there.'}</span></div>
+      ${free?`<button class="btn sm" data-fill="${id}">Add ${Math.min(free,r)} seat${Math.min(free,r)>1?'s':''}</button>`:''}</div>`}).join('');
+
+  const travel=inLeg.map(id=>{const a=byId(id),tv=leg==='arrival'?a.arr:a.dep;if(!tv)return'';
+    return `<button class="tchip" data-use="${id}" style="--pc:${color(id)}" title="Set pickup time from ${esc(first(a.name))}'s travel"><i>${initials(a.name)}</i>${leg==='arrival'?'Lands':'Flight'} ${fmt12(toMin(tv.time))} · ${esc(tv.pt)}</button>`}).join('');
+  const st=sc?toMin(sc.time):0;
+
+  const all=VEH.map(v=>({v,s:vStatus(v,o)}));
+  const best=bestFit(all,o);
+  const inBatch=x=>(x.s.trips||[]).some(t=>tripOcc(t,o).some(y=>S.draft[y.who]));
+  const card=x=>vehCard(x.v,x.s,o,x.v.id===best);
+  const groups=[
+    ['Your batch is on',all.filter(x=>inBatch(x))],
+    ['Recommended',all.filter(x=>!inBatch(x)&&x.v.id===best)],
+    ['Same route and time, join the trip',all.filter(x=>!inBatch(x)&&x.v.id!==best&&x.s.kind==='join')],
+    ['Free at this time',all.filter(x=>!inBatch(x)&&x.v.id!==best&&x.s.kind==='free').sort((a,b)=>a.v.cap-b.v.cap)],
+  ].filter(g=>g[1].length);
+  const blocked=all.filter(x=>!inBatch(x)&&!usable(x.s.kind));
+
+  ws.innerHTML=`<div class="scroll">
+    <div class="sticky">
+      <div class="sec-t"><h3>${S.selected.length} attendee${S.selected.length>1?'s':''} selected</h3>
+        <div><button class="tbtn red" id="clearLeg" ${got?'':'disabled'}>Clear ${leg} seats</button><button class="tbtn" id="undo">Undo edits</button></div></div>
+      <div class="batch">${mems}</div>
+      <div class="prog"><div class="track">${track}</div><span><b>${got}</b> of ${need} ${leg} seats${got>=need?' · all set':` · ${need-got} to go`}</span></div>
+    </div>
+    ${shortHtml?`<div class="sec alerts">${shortHtml}</div>`:''}
+    <div class="sec">
+      <div class="seg" role="tablist">${legBtns}</div>
+      ${sc?`<div class="route">
+        <div class="rp"><span class="lbl">Pickup</span><b>${esc(sc.pickup)}</b><span class="tm">${fmtDate(sc.date)}, ${fmt12(st)}</span></div>
+        <div class="rline">${dur(sc.pickup,sc.drop)} min<i></i></div>
+        <div class="rp end"><span class="lbl">Drop-off</span><b>${esc(sc.drop)}</b><span class="tm">about ${fmt12(st+dur(sc.pickup,sc.drop))}</span></div>
+        <button class="editbtn" id="editSch">${S.editSch?'Done':'Edit'}</button></div>
+      ${S.editSch?`<div class="sched">
+        <label>Pickup<select id="pickup">${LOC.map(l=>`<option ${l===sc.pickup?'selected':''}>${l}</option>`).join('')}</select></label>
+        <label>Drop-off<select id="drop">${LOC.map(l=>`<option ${l===sc.drop?'selected':''}>${l}</option>`).join('')}</select></label>
+        <label>Date<input type="date" id="sdate" value="${sc.date}"></label>
+        <label>Time<input type="time" id="stime" value="${sc.time}" step="900"></label></div>
+        <label class="dedrow"><input type="checkbox" id="ded" ${sc.dedicated?'checked':''}> Dedicated vehicle, no sharing</label>`
+        :`<div class="rmeta">${sc.dedicated?'<span class="tag ded">Dedicated vehicle</span>':'<span class="tag">Shared ride</span>'}${travel?`<span class="travel">${travel}</span>`:''}</div>`}`:''}
+    </div>
+    <div class="sec">
+      <div class="sec-t"><h3>Choose a vehicle</h3><span class="hint">Open a card to pick seats and see its day</span></div>
+      ${groups.map(([t,list])=>`<div class="vgroup">${t}</div>${list.map(card).join('')}`).join('')||'<p class="muted">No vehicle is free at this time. Try another time.</p>'}
+      ${blocked.length?`<details class="unav" ${blocked.some(x=>x.v.id===S.open)?'open':''}><summary>Not available at this time (${blocked.length})</summary>${blocked.map(card).join('')}</details>`:''}
+    </div></div>`;
+}
+
+/* ================= Render: summary ================= */
+function renderSum(){
+  const el=document.getElementById('sum');
+  const pend=ATT.filter(a=>status(a)==='pending').length,pb=document.getElementById('pendingBtn');
+  pb.disabled=!pend;pb.innerHTML=`Unsent updates <span class="n">${pend}</span>`;
+  document.getElementById('waLbl').classList.toggle('on',S.ch.wa);document.getElementById('emLbl').classList.toggle('on',S.ch.em);
+  if(!S.selected.length){
+    el.innerHTML=`<div class="panel-head"><div class="panel-title">Review and save</div></div><div class="scroll section">
+      <p class="muted">Changes for the selected attendees show up here before anything is saved or sent.</p>
+      ${pend?`<p class="muted" style="margin-top:12px">${pend} attendee${pend>1?'s have':' has'} saved changes that were never messaged. Use <b>Unsent updates</b> at the top to send them.</p>`:''}</div>`;return;
+  }
+  let total=0;
+  const rows=S.selected.map(id=>{
+    const a=byId(id),c=change(a),d=S.draft[id];
+    const lbl={create:['New','b-new'],update:['Updated','b-upd'],remove:['Removed','b-rem'],unchanged:['No change','b-un']}[c.action];
+    const pendOld=c.action==='unchanged'&&status(a)==='pending';
+    const legs=legsOf(a).map(l=>{const lc=legChange(a,l),o=seatText(a.saved[l]),n=seatText(d[l]);
+      return `<div class="diff"><span class="lg">${LEG_NAME[l]}:</span> ${lc!=='unchanged'&&o?`<span class="old">${esc(o)}</span><span class="arrow"> → </span>`:''}${n?esc(n):'<span style="color:var(--amber)">not allotted</span>'}</div>
+        ${d[l].length&&d[l].length<a.pax?`<div class="diff warn">${a.pax-d[l].length} of ${a.pax} people have no ${l} seat</div>`:''}`}).join('');
+    const p=payable(a,d);total+=p;
+    return `<div class="chg"><div class="chg-h"><span class="dot" style="--pc:${color(id)}"></span><b>${esc(a.name)}</b><span class="badge ${pendOld?'b-pend':lbl[1]}">${pendOld?'Not notified yet':lbl[0]}</span></div>
+      ${legs}<div class="amt">Payable ${inr(p)}</div></div>`;
+  }).join('');
+  const changed=S.selected.filter(id=>change(byId(id)).action!=='unchanged');
+  const pendingSel=S.selected.filter(id=>change(byId(id)).action==='unchanged'&&status(byId(id))==='pending');
+  const toNotify=changed.length+pendingSel.length,chans=[S.ch.wa&&'WhatsApp',S.ch.em&&'Email'].filter(Boolean);
+
+  const pid=changed[0]||pendingSel[0]||S.selected[0],pa=byId(pid),pd=S.draft[pid],pc=change(pa);
+  const lines=legsOf(pa).map(l=>{const k=pd[l][0];if(!k) return `${LEG_NAME[l]}: not arranged yet`;
+    const t=trip(k.split('|')[0]),v=veh(t.vehicleId);
+    return `${LEG_NAME[l]} ${fmtDate(t.date)}, ${fmt12(t.start)}: ${t.pickup} → ${t.drop}\n${v.name} ${v.plate}, driver ${v.driver} (${v.phone}), seats ${pd[l].map(x=>x.split('|')[1]).join(', ')}`}).join('\n\n');
+  const kind=pc.action==='create'?'confirmed':pc.action==='remove'?'cancelled':'updated';
+  const body=`Hi ${first(pa.name)}, your transport for Tech Summit 2026 is ${kind}.\n\n${lines}`;
+  const pvTab=S.ch[S.pvTab]?S.pvTab:(S.ch.wa?'wa':'em');
+
+  el.innerHTML=`<div class="panel-head"><div class="panel-title">Review and save</div></div>
+    <div class="scroll">
+      <div class="section"><div class="sec-head"><h3>Changes</h3><span class="hint">${changed.length} of ${S.selected.length} changed</span></div>${rows}
+        <div class="total"><span>Total payable</span><span>${inr(total)}</span></div></div>
+      <div class="section"><div class="sec-head"><h3>Message preview</h3><span class="hint">${toNotify?`${toNotify} recipient${toNotify>1?'s':''}`:'Nothing to send'}</span></div>
+        ${chans.length?`<div class="pv-tabs">${S.ch.wa?`<button class="tab ${pvTab==='wa'?'on':''}" data-pv="wa">WhatsApp</button>`:''}${S.ch.em?`<button class="tab ${pvTab==='em'?'on':''}" data-pv="em">Email</button>`:''}</div>
+        <div class="preview ${pvTab==='em'?'email':''}">${pvTab==='em'?`<b>Subject: Your transport is ${kind}</b>\n\n`:''}${esc(body)}</div>`
+        :`<p class="muted">No channel ticked at the top, so no message will be sent. You can still save.</p>`}</div>
+    </div>
+    <div class="foot">
+      <div class="row"><button class="btn" id="saveOnly" ${changed.length?'':'disabled'} title="Save seats. Attendees are flagged as 'Changed · not notified'">Save only</button>
+        <button class="btn teal" id="saveNotify" ${chans.length&&toNotify?'':'disabled'}>${chans.length?'Save and notify':'Tick a channel to notify'}</button></div>
+      <div class="explain">${chans.length&&toNotify?`Sends via ${chans.join(' and ')} to ${toNotify} attendee${toNotify>1?'s':''}. Old seats are released when you save.`:'"Save only" keeps a record that these people still need a message.'}</div>
+      <button class="linkbtn" id="payloadBtn">See what the backend receives</button>
+    </div>`;
+}
+function render(){renderList();renderWs();renderSum();}
+
+/* ================= Actions ================= */
+function select(id,on){
+  const a=byId(id);
+  if(on&&!S.selected.includes(id)){S.selected.push(id);S.draft[id]={arrival:[...a.saved.arrival],departure:[...a.saved.departure]};if(!S.active)S.active=id;}
+  else if(!on&&S.selected.includes(id)){S.selected=S.selected.filter(x=>x!==id);delete S.draft[id];if(S.active===id)S.active=S.selected[0]||null;cleanDraftTrips();}
+  if(!S.selected.length){S.schTouched={arrival:false,departure:false};S.open=null;}
+  initSch();if(S.selected.length===1)openForActive();
+}
+function remaining(id,leg){const a=byId(id);return needs(a,leg)?a.pax-S.draft[id][leg].length:0;}
+function nextActive(){const n=S.selected.find(id=>remaining(id,S.leg)>0);if(n)S.active=n;}
+function ensureTrip(v,s){
+  if(s.trip) return s.trip;
+  const sc=S.sch[S.leg];
+  const t={id:'NEW-'+(newTripSeq++),vehicleId:v.id,leg:S.leg,date:sc.date,start:toMin(sc.time),pickup:sc.pickup,drop:sc.drop,dedicated:!!sc.dedicated,draft:true};
+  TRIPS.push(t);return t;
+}
+function clickSeat(vid,n){
+  const v=veh(vid),o=occ(),s=vStatus(v,o);if(!usable(s.kind)) return;
+  if(s.trip){const who=o[s.trip.id+'|'+n];
+    if(who&&S.draft[who]){S.draft[who][S.leg]=S.draft[who][S.leg].filter(k=>k!==s.trip.id+'|'+n);S.active=who;cleanDraftTrips();render();return;}
+    if(who) return;}
+  if(!needs(byId(S.active),S.leg)||remaining(S.active,S.leg)<=0){
+    const nx=S.selected.find(id=>remaining(id,S.leg)>0);
+    if(!nx){toast('Everyone in this batch already has a seat. Click a coloured seat to free it first.');return;}
+    toast(`${byId(S.active).name} has enough seats, giving this one to ${byId(nx).name}`);S.active=nx;
+  }
+  const t=ensureTrip(v,s);
+  if(t.dedicated){const others=tripOcc(t,o).filter(x=>x.who!==S.active);if(others.length){toast('Dedicated trips carry one booking only. Untick "Dedicated vehicle" to share.');return;}}
+  S.draft[S.active][S.leg].push(t.id+'|'+n);
+  if(remaining(S.active,S.leg)<=0) nextActive();
+  render();
+}
+function moveBatch(vid){
+  const v=veh(vid),sc=S.sch[S.leg];
+  const ids=sc.dedicated?[S.active]:S.selected.filter(id=>needs(byId(id),S.leg));
+  ids.forEach(id=>S.draft[id][S.leg]=[]);cleanDraftTrips();
+  const o=occ(),s=vStatus(v,o);if(!usable(s.kind)){toast('This vehicle is no longer free for this time.');render();return;}
+  const t=ensureTrip(v,s),taken=new Set(tripOcc(t,o).map(x=>x.n));
+  // Keep each group together: seat the largest groups that fit whole, skip groups that would be split
+  let placed=0,left=0,free=v.cap-taken.size;
+  [...ids].sort((a,b)=>byId(b).pax-byId(a).pax).forEach(id=>{const r=remaining(id,S.leg);
+    if(r>free){left+=r;return;}
+    for(let n=1,c=r;n<=v.cap&&c>0;n++){if(taken.has(n))continue;S.draft[id][S.leg].push(t.id+'|'+n);taken.add(n);c--;placed++;}free-=r;});
+  cleanDraftTrips();S.open=vid;nextActive();
+  toast(left?`Placed ${placed} on ${v.name}. ${left} more don't fit as a group — move them to another vehicle.`:`Moved ${placed} seat${placed>1?'s':''} to ${v.name} ${v.plate}. Old seats are released on save.`);
+  render();
+}
+function buildPayload(ids,notify){
+  const tripOut=t=>t.draft?{new_trip:{vehicle_id:t.vehicleId,date:t.date,pickup_time:toHM(t.start),pickup:t.pickup,drop:t.drop,dedicated:!!t.dedicated}}:{trip_id:t.id};
+  const legOut=keys=>{const g={};keys.forEach(k=>{const [tid,n]=k.split('|');(g[tid]=g[tid]||[]).push(+n)});return Object.entries(g).map(([tid,seats])=>({...tripOut(trip(tid)),seats}))};
+  return {event_id:EVENT.id,requested_at:new Date().toISOString(),notify:{whatsapp:notify&&S.ch.wa,email:notify&&S.ch.em},
+    allocations:ids.map(id=>{const a=byId(id),d=S.draft[id]||a.saved,c=S.draft[id]?change(a):{action:'unchanged',legs:[]};
+      const legs={};legsOf(a).forEach(l=>legs[l]={action:legChange(a,l),previous:legOut(a.saved[l]),next:legOut(d[l])});
+      return {attendee_id:id,action:c.action,base_version:a.version,changed_legs:c.legs,legs,payable:payable(a,d),
+        send_message:notify&&(S.ch.wa||S.ch.em)?(c.action==='unchanged'?'resend_latest':c.action):null};})};
+}
+function save(notify){
+  const changed=S.selected.filter(id=>change(byId(id)).action!=='unchanged');
+  const pendingSel=notify?S.selected.filter(id=>change(byId(id)).action==='unchanged'&&status(byId(id))==='pending'):[];
+  const ids=[...changed,...pendingSel];if(!ids.length) return;
+  console.log('POST /transport/allocations/batch',buildPayload(ids,notify));
+  changed.forEach(id=>{const a=byId(id);a.saved={arrival:[...S.draft[id].arrival],departure:[...S.draft[id].departure]};a.version++;});
+  if(notify) ids.forEach(id=>{const a=byId(id);a.notifiedVersion=a.version;});
+  TRIPS.forEach(t=>t.draft=false);
+  S.selected=[];S.draft={};S.active=null;S.open=null;S.schTouched={arrival:false,departure:false};
+  const o=occ(),before=TRIPS.length;TRIPS=TRIPS.filter(t=>tripOcc(t,o).length);const freed=before-TRIPS.length;
+  const chans=[S.ch.wa&&'WhatsApp',S.ch.em&&'Email'].filter(Boolean).join(' and ');
+  toast((notify?`Saved ${changed.length} and notified ${ids.length} via ${chans}`:`Saved ${changed.length}. They're listed under Unsent updates until messaged.`)+(freed?` ${freed} empty trip${freed>1?'s':''} released.`:''));
+  render();
+}
+
+/* ================= Modals ================= */
+function openModal(h){document.getElementById('modal').innerHTML=h;document.getElementById('modalBg').classList.add('show');}
+function closeModal(){document.getElementById('modalBg').classList.remove('show');}
+function showPayload(){
+  const changed=S.selected.filter(id=>change(byId(id)).action!=='unchanged');
+  openModal(`<div class="modal-h"><h3>Request sent on save</h3><button class="x-close" data-close>×</button></div>
+    <div class="modal-b"><p class="muted" style="margin-bottom:10px">Each leg says whether it's <b>create</b>, <b>update</b> or <b>remove</b>, with the <b>previous</b> and <b>next</b> seats, so the server can release old seats and book new ones in one transaction. A seat pointing to <b>new_trip</b> tells the server to create the trip first. The server must re-check vehicle clashes before committing, since another admin may have booked the same vehicle meanwhile.</p>
+    <pre class="json">${esc(JSON.stringify(buildPayload(changed.length?changed:S.selected,S.ch.wa||S.ch.em),null,2))}</pre></div>
+    <div class="modal-f"><button class="btn" data-close>Close</button></div>`);
+}
+function showPending(){
+  const list=ATT.filter(a=>status(a)==='pending'),chans=[S.ch.wa&&'WhatsApp',S.ch.em&&'Email'].filter(Boolean);
+  openModal(`<div class="modal-h"><h3>Unsent updates</h3><button class="x-close" data-close>×</button></div>
+    <div class="modal-b"><p class="muted" style="margin-bottom:6px">These bookings were saved or edited after the last message. The attendees still have old pickup details.</p>
+    ${list.map(a=>`<label class="prow"><input type="checkbox" class="pchk" value="${a.id}" checked><div class="av">${initials(a.name)}</div>
+      <div><b>${esc(a.name)}</b> <span class="muted">v${a.version}, last notified v${a.notifiedVersion||'—'}</span>
+      ${legsOf(a).map(l=>`<div class="muted">${LEG_NAME[l]}: ${esc(seatText(a.saved[l])||'not allotted')}</div>`).join('')}</div></label>`).join('')}</div>
+    <div class="modal-f"><span class="muted">${chans.length?`Sends via ${chans.join(' and ')}`:'Tick WhatsApp or Email at the top first'}</span>
+      <button class="btn" data-close>Cancel</button><button class="btn teal" id="sendPending" ${chans.length?'':'disabled'}>Send updates</button></div>`);
+  const b=document.getElementById('sendPending');
+  b&&b.addEventListener('click',()=>{const ids=[...document.querySelectorAll('.pchk:checked')].map(i=>i.value);if(!ids.length)return;
+    console.log('POST /transport/allocations/notify',{event_id:EVENT.id,attendee_ids:ids,notify:{whatsapp:S.ch.wa,email:S.ch.em}});
+    ids.forEach(id=>{const a=byId(id);a.notifiedVersion=a.version;});closeModal();toast(`Sent updates to ${ids.length} via ${chans.join(' and ')}`);render();});
+}
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3600);}
+
+/* ================= Events ================= */
+document.getElementById('list').addEventListener('click',e=>{const p=e.target.closest('.person');if(!p)return;select(p.dataset.id,!S.selected.includes(p.dataset.id));render();});
+document.getElementById('tabs').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(t){S.tab=t.dataset.tab;renderList();}});
+document.getElementById('search').addEventListener('input',e=>{S.q=e.target.value;renderList();});
+document.getElementById('reqFilter').addEventListener('change',e=>{S.req=e.target.value;renderList();});
+document.getElementById('selAll').addEventListener('change',e=>{visible().forEach(a=>select(a.id,e.target.checked));render();});
+document.getElementById('clearSel').addEventListener('click',()=>{S.selected.slice().forEach(id=>select(id,false));render();});
+document.getElementById('chWa').addEventListener('change',e=>{S.ch.wa=e.target.checked;renderSum();});
+document.getElementById('chEm').addEventListener('change',e=>{S.ch.em=e.target.checked;renderSum();});
+document.getElementById('chEm').checked=S.ch.em;
+document.getElementById('pendingBtn').addEventListener('click',showPending);
+
+const ws=document.getElementById('ws');
+ws.addEventListener('click',e=>{
+  const t=e.target;
+  const un=t.closest('[data-unsel]');if(un){e.stopPropagation();select(un.dataset.unsel,false);render();return;}
+  const g=t.closest('[data-guest]');if(g){S.active=g.dataset.guest;openForActive();render();return;}
+  const lg=t.closest('[data-leg]');if(lg){S.leg=lg.dataset.leg;const a=S.selected.map(byId).find(x=>needs(x,S.leg));if(a&&!needs(byId(S.active),S.leg))S.active=a.id;openForActive();render();return;}
+  const u=t.closest('[data-use]');if(u){S.sch[S.leg]={...schFrom(byId(u.dataset.use),S.leg),dedicated:S.sch[S.leg].dedicated};S.schTouched[S.leg]=true;render();return;}
+  const st=t.closest('[data-seat]');if(st){const [vid,n]=st.dataset.seat.split('|');clickSeat(vid,+n);return;}
+  const mv=t.closest('[data-move]');if(mv){e.stopPropagation();moveBatch(mv.dataset.move);return;}
+  const op=t.closest('[data-open]');if(op){S.open=S.open===op.dataset.open?null:op.dataset.open;renderWs();return;}
+  const fl=t.closest('[data-fill]');if(fl){fillRest(fl.dataset.fill);return;}
+  if(t.closest('#editSch')){S.editSch=!S.editSch;renderWs();return;}
+  if(t.closest('#clearLeg')){S.selected.forEach(id=>S.draft[id][S.leg]=[]);cleanDraftTrips();render();return;}
+  if(t.closest('#undo')){S.selected.forEach(id=>{const a=byId(id);S.draft[id]={arrival:[...a.saved.arrival],departure:[...a.saved.departure]}});cleanDraftTrips();toast('Unsaved edits undone');render();}
+});
+ws.addEventListener('change',e=>{
+  const sc=S.sch[S.leg];if(!sc)return;
+  const map={pickup:'pickup',drop:'drop',sdate:'date',stime:'time'};
+  if(map[e.target.id]&&e.target.value){sc[map[e.target.id]]=e.target.value;S.schTouched[S.leg]=true;render();}
+  if(e.target.id==='ded'){sc.dedicated=e.target.checked;S.schTouched[S.leg]=true;render();}
+});
+document.getElementById('sum').addEventListener('click',e=>{
+  const pv=e.target.closest('[data-pv]');if(pv){S.pvTab=pv.dataset.pv;renderSum();return;}
+  if(e.target.closest('#saveOnly'))save(false);
+  if(e.target.closest('#saveNotify'))save(true);
+  if(e.target.closest('#payloadBtn'))showPayload();
+});
+document.getElementById('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg'||e.target.closest('[data-close]'))closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+render();
+</script>
+</body>
+</html>
