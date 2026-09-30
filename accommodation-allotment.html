@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accommodation allotment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1f2a44; --ink-2:#4a5568; --ink-3:#8792a2;
+  --line:#e3e7ed; --line-2:#cfd6df;
+  --canvas:#f3f5f8; --surface:#fff; --soft:#f8f9fb;
+  --primary:#1f2a44; --primary-ink:#fff;
+  --teal:#0e7c86; --teal-bg:#e6f4f5;
+  --green:#15803d; --green-bg:#e8f6ed;
+  --amber:#b45309; --amber-bg:#fdf3e2;
+  --red:#c2410c; --red-bg:#fdece4;
+  --wa:#128c4a;
+  --r-lg:12px; --r:8px; --r-sm:6px;
+  font-family:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within{outline:2px solid var(--teal);outline-offset:2px}
+.app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+
+/* Header */
+.top{display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
+.top h1{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.top .sub{color:var(--ink-3);font-size:13px}
+.top .spacer{flex:1}
+.channels{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line);border-radius:999px;background:var(--soft)}
+.channels .lbl{font-size:12px;color:var(--ink-3);padding:0 8px 0 10px}
+.chip-toggle{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-weight:600;font-size:13px;cursor:pointer;user-select:none;color:var(--ink-2)}
+.chip-toggle input{accent-color:var(--teal);width:15px;height:15px}
+.chip-toggle.on{background:var(--surface);box-shadow:0 0 0 1px var(--line-2)}
+.chip-toggle.on.wa{color:var(--wa)} .chip-toggle.on.em{color:var(--teal)}
+.pending-btn{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--amber-bg);color:var(--amber);font-weight:600;font-size:13px;border:1px solid #f3d9ad}
+.pending-btn .n{background:var(--amber);color:#fff;border-radius:999px;padding:0 7px;font-size:12px}
+.pending-btn[disabled]{background:var(--soft);color:var(--ink-3);border-color:var(--line);cursor:default}
+.pending-btn[disabled] .n{background:var(--ink-3)}
+
+/* Layout */
+.cols{display:grid;grid-template-columns:330px minmax(0,1fr) 340px;gap:14px;padding:14px;min-height:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel-head{padding:14px 16px 10px}
+.panel-title{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.panel-title .count{color:var(--ink-3);font-weight:500}
+.scroll{overflow:auto;min-height:0;flex:1}
+
+/* Attendee list */
+.search{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--soft);margin-top:10px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
+.tab{padding:5px 10px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--ink-2);border:1px solid var(--line)}
+.tab .c{color:var(--ink-3);font-weight:500;margin-left:3px}
+.tab.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tab.on .c{color:#c9d1e0}
+.row-tools{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}
+.row-tools select{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.selbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--soft);font-size:13px}
+.selbar label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.selbar input{width:15px;height:15px;accent-color:var(--primary)}
+.link{color:var(--teal);font-weight:600;font-size:13px}
+.person{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:start;padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;position:relative}
+.person:hover{background:var(--soft)}
+.person.sel{background:#f2f5fb}
+.person.sel::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pc,var(--primary))}
+.person input{margin-top:9px;width:15px;height:15px;accent-color:var(--primary)}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;background:#e8ecf2;color:var(--ink-2);flex-shrink:0}
+.pname{font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pax{font-size:11.5px;font-weight:600;color:var(--ink-2);background:#eef1f5;border-radius:4px;padding:0 5px}
+.pmeta{font-size:12.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.palloc{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.badge{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.b-un{background:#eef1f5;color:var(--ink-2)}
+.b-part{background:var(--amber-bg);color:var(--amber)}
+.b-pend{background:var(--amber-bg);color:var(--amber)}
+.b-ok{background:var(--green-bg);color:var(--green)}
+.b-new{background:var(--teal-bg);color:var(--teal)}
+.b-upd{background:var(--amber-bg);color:var(--amber)}
+.b-rem{background:var(--red-bg);color:var(--red)}
+.pstatus{margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.empty-list{padding:30px 16px;text-align:center;color:var(--ink-3)}
+
+/* Workspace */
+.ws-empty{flex:1;display:grid;place-items:center;text-align:center;padding:40px;color:var(--ink-2)}
+.ws-empty h2{font-size:18px;margin-bottom:6px;color:var(--ink)}
+.ws-empty p{max-width:380px;margin:0 auto}
+.steps{display:flex;gap:18px;justify-content:center;margin-top:22px;font-size:13px;color:var(--ink-3)}
+.steps b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#e8ecf2;color:var(--ink-2);font-size:11px;margin-right:6px}
+.section{padding:14px 18px;border-bottom:1px solid var(--line)}
+.section:last-child{border-bottom:0}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.sec-head h3{font-size:14px;font-weight:700}
+.sec-head .hint{font-size:12.5px;color:var(--ink-3)}
+.guests{display:flex;gap:8px;flex-wrap:wrap}
+.guest{display:flex;align-items:center;gap:9px;padding:7px 8px 7px 7px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--surface);min-width:190px;text-align:left}
+.guest.active{border-color:var(--pc);box-shadow:0 0 0 3px color-mix(in srgb,var(--pc) 18%,transparent)}
+.guest .av{width:30px;height:30px;background:var(--pc);color:#fff}
+.guest .gn{font-weight:600;font-size:13px;line-height:1.2}
+.bar{height:5px;border-radius:3px;background:#eef1f5;margin-top:5px;overflow:hidden;width:110px}
+.bar i{display:block;height:100%;background:var(--pc)}
+.gcount{font-size:12px;color:var(--ink-3)}
+.guest .x{margin-left:auto;color:var(--ink-3);padding:2px 6px;border-radius:4px;font-size:16px;line-height:1}
+.guest .x:hover{background:#eef1f5;color:var(--ink)}
+.need{display:flex;align-items:center;gap:14px;margin-top:12px;padding:10px 12px;background:var(--soft);border-radius:var(--r);font-size:13px;flex-wrap:wrap}
+.need strong{font-size:15px}
+.need .ok{color:var(--green);font-weight:600}
+.need .warn{color:var(--amber);font-weight:600}
+.need .actions{margin-left:auto;display:flex;gap:8px}
+.btn{padding:8px 14px;border-radius:var(--r);font-weight:600;font-size:13px;border:1px solid var(--line-2);background:var(--surface);display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.primary:hover{background:#2b3a5c}
+.btn.teal{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn.teal:hover{background:#0b6a73}
+.btn.ghost-red{color:var(--red);border-color:#f3c9b6}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+
+.hotels{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.hotel{border:1.5px solid var(--line);border-radius:var(--r);padding:10px 12px;text-align:left;background:var(--surface)}
+.hotel.on{border-color:var(--primary);background:#f5f7fb}
+.hotel .hn{font-weight:700;display:flex;justify-content:space-between;gap:8px}
+.hotel .ha{font-size:12.5px;color:var(--ink-3)}
+.hotel .hf{font-size:12.5px;margin-top:6px;color:var(--green);font-weight:600}
+.hotel .hf.low{color:var(--amber)}
+.hotel .mine{font-size:11.5px;background:var(--primary);color:#fff;border-radius:999px;padding:0 7px;font-weight:600;height:18px}
+.types{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.type{padding:7px 12px;border-radius:var(--r);border:1px solid var(--line);font-size:13px;text-align:left}
+.type b{font-weight:600}
+.type span{color:var(--ink-3);font-size:12px;margin-left:4px}
+.type.on{border-color:var(--primary);background:var(--primary);color:#fff}
+.type.on span{color:#c9d1e0}
+
+.grid-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.grid-tools input{padding:7px 10px;border:1px solid var(--line);border-radius:var(--r-sm);width:160px;background:var(--soft)}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.seg button{padding:6px 10px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.seg button.on{background:var(--soft);color:var(--ink);box-shadow:inset 0 -2px 0 var(--primary)}
+.legend{display:flex;gap:12px;margin-left:auto;font-size:12px;color:var(--ink-3)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.room{border:1px solid var(--line);border-radius:var(--r);padding:10px;background:var(--surface)}
+.room.full{background:var(--soft)}
+.room.blocked{background:repeating-linear-gradient(135deg,#f6f7f9 0 8px,#eef0f3 8px 16px)}
+.room-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.room-h b{font-size:14px}
+.room-h .rf{font-size:12px;color:var(--ink-3)}
+.room-h .rf.g{color:var(--green);font-weight:600}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px}
+.slot{height:48px;border-radius:var(--r-sm);border:1.5px dashed var(--line-2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10.5px;color:var(--ink-3);gap:1px;position:relative}
+.slot svg{width:18px;height:18px}
+.slot.free:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+.slot.draft{border:1.5px solid var(--pc);background:var(--pc);color:#fff;font-weight:700}
+.slot.draft.kept{background:color-mix(in srgb,var(--pc) 80%,#fff)}
+.slot.other{border:1.5px solid #dde2e9;background:#e8ecf1;color:var(--ink-2);cursor:not-allowed;font-weight:600}
+.slot.block{border:0;background:transparent;cursor:not-allowed}
+.room-f{display:flex;justify-content:flex-end;margin-top:8px;min-height:26px}
+.more{display:block;margin:12px auto 0}
+
+/* Summary */
+.stay{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stay label{font-size:12.5px;color:var(--ink-3);display:flex;flex-direction:column;gap:4px}
+.stay input{padding:7px 9px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.nights{font-size:12.5px;color:var(--ink-2);margin-top:6px}
+.chg{padding:10px 0;border-bottom:1px dashed var(--line)}
+.chg:last-child{border-bottom:0}
+.chg-h{display:flex;align-items:center;gap:8px}
+.chg-h .dot{width:9px;height:9px;border-radius:50%;background:var(--pc)}
+.chg-h b{font-size:13.5px;flex:1}
+.diff{font-size:12.5px;margin-top:5px;padding-left:17px;color:var(--ink-2)}
+.diff .old{text-decoration:line-through;color:var(--ink-3)}
+.diff .arrow{color:var(--ink-3);margin:0 2px}
+.fields{padding-left:17px;margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
+.fields span{font-size:11px;background:#eef1f5;border-radius:4px;padding:0 6px;color:var(--ink-2)}
+.preview{background:#eaf6ef;border-radius:var(--r);padding:10px 12px;font-size:12.5px;color:#173d27;white-space:pre-line}
+.preview.email{background:var(--teal-bg);color:#0b3f44}
+.pv-tabs{display:flex;gap:6px;margin-bottom:8px}
+.muted{color:var(--ink-3);font-size:12.5px}
+.foot{padding:12px 16px;border-top:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.foot .explain{font-size:12px;color:var(--ink-3)}
+.foot .row{display:flex;gap:8px}
+.foot .row .btn{flex:1}
+.linkbtn{color:var(--teal);font-weight:600;font-size:12.5px;text-align:left}
+
+/* Modal + toast */
+.modal-bg{position:fixed;inset:0;background:rgba(20,28,45,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--r-lg);width:min(640px,100%);max-height:86vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.modal-h h3{font-size:16px}
+.modal-b{padding:14px 18px;overflow:auto}
+.modal-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.modal-f .muted{margin-right:auto}
+pre.json{background:#1f2a44;color:#dbe4f3;font-size:12px;padding:14px;border-radius:var(--r);overflow:auto;line-height:1.5}
+.prow{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.prow input{margin-top:4px;accent-color:var(--primary)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:var(--r);font-size:13.5px;opacity:0;transition:.2s;pointer-events:none;z-index:30;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.x-close{font-size:20px;color:var(--ink-3);padding:0 6px}
+
+@media (max-width:1180px){.cols{grid-template-columns:300px minmax(0,1fr)}.summary{grid-column:1/-1}}
+@media (max-width:760px){.cols{grid-template-columns:1fr}.app{height:auto}.panel{max-height:none}.top{flex-wrap:wrap}.legend{margin-left:0}}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <button class="btn sm" aria-label="Back">←</button>
+    <div>
+      <h1>Accommodation allotment</h1>
+      <div class="sub">Tech Summit 2026 · 14–17 Oct</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="pending-btn" id="pendingBtn" title="Attendees whose allocation changed after the last message"></button>
+    <div class="channels" role="group" aria-label="Notify via">
+      <span class="lbl">Notify via</span>
+      <label class="chip-toggle wa" id="waLbl"><input type="checkbox" id="chWa"> WhatsApp</label>
+      <label class="chip-toggle em" id="emLbl"><input type="checkbox" id="chEm"> Email</label>
+    </div>
+  </header>
+
+  <main class="cols">
+    <!-- Attendees -->
+    <section class="panel" aria-label="Attendees">
+      <div class="panel-head">
+        <div class="panel-title">Attendees <span class="count" id="attCount"></span></div>
+        <input class="search" id="search" placeholder="Search name, email or ID">
+        <div class="tabs" id="tabs"></div>
+        <div class="row-tools">
+          <select id="hotelFilter"></select>
+        </div>
+      </div>
+      <div class="selbar">
+        <label><input type="checkbox" id="selAll"> Select all shown</label>
+        <span><b id="selCount">0</b> selected · <button class="link" id="clearSel">Clear</button></span>
+      </div>
+      <div class="scroll" id="list"></div>
+    </section>
+
+    <!-- Workspace -->
+    <section class="panel" aria-label="Allocation" id="ws"></section>
+
+    <!-- Summary -->
+    <section class="panel summary" aria-label="Review and save" id="sum"></section>
+  </main>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- Dummy data ---------------- */
+const EVENT = {id:'EVT-2026-TS', checkIn:'2026-10-14', checkOut:'2026-10-17'};
+const range=(a,b,p='')=>Array.from({length:b-a+1},(_,i)=>p+(a+i));
+const HOTELS=[
+  {id:'H1',name:'Grand Hotel',area:'MG Road, Main City',types:[
+    {id:'DLX',name:'Deluxe',beds:2,mat:2,rooms:range(101,110)},
+    {id:'STE',name:'Suite',beds:2,mat:1,rooms:range(201,204)}]},
+  {id:'H2',name:'Hotel Taj',area:'Lake View, Main City',types:[
+    {id:'STD',name:'Standard',beds:2,mat:0,rooms:range(301,312)},
+    {id:'DLX',name:'Deluxe',beds:2,mat:2,rooms:range(401,406)}]},
+  {id:'H3',name:'Mumbai Residency',area:'Airport Road',types:[
+    {id:'DRM',name:'Dormitory',beds:6,mat:0,rooms:['D1','D2','D3','D4']},
+    {id:'STD',name:'Standard',beds:2,mat:1,rooms:range(501,508)}]},
+];
+const BLOCKED_ROOMS=new Set(['H1|108','H2|309']); // under maintenance
+
+const SLOT={}, ROOMS=[];
+HOTELS.forEach(h=>h.types.forEach(t=>t.rooms.forEach(no=>{
+  const room={hotelId:h.id,typeId:t.id,no,keys:[],blocked:BLOCKED_ROOMS.has(h.id+'|'+no)};
+  const add=(sid,label,kind)=>{const k=`${h.id}|${no}|${sid}`;SLOT[k]={key:k,sid,label,kind,hotelId:h.id,typeId:t.id,roomNo:no};room.keys.push(k)};
+  for(let i=1;i<=t.beds;i++)add('B'+i,'Bed '+i,'bed');
+  for(let i=1;i<=t.mat;i++)add('M'+i,'Mattress '+i,'mat');
+  ROOMS.push(room);
+})));
+const K=(h,no,...s)=>s.map(x=>`${h}|${no}|${x}`);
+
+let ATT=[
+ ['A-1001','Aditya Deshmukh','adityad@yopmail.com','+91 98200 11001',4,[...K('H1','101','B1','B2','M1','M2')],1,1],
+ ['A-1002','Gaurav Tangariya','gauravt@yopmail.com','+91 98200 11002',1,K('H1','102','B1'),1,1],
+ ['A-1003','Priya Singh','priyas@yopmail.com','+91 98200 11003',3,[...K('H1','102','B2','M1'),...K('H1','103','B1')],2,1],
+ ['A-1004','Amit Patel','amitp@yopmail.com','+91 98200 11004',2,K('H1','103','B2','M1'),1,1],
+ ['A-1005','Neha Gupta','nehag@yopmail.com','+91 98200 11005',2,K('H1','104','B1','B2'),1,1],
+ ['A-1006','Rohan Mehta','rohanm@yopmail.com','+91 98200 11006',2,K('H1','104','M1','M2'),2,1],
+ ['A-1007','Sneha Iyer','snehai@yopmail.com','+91 98200 11007',1,[],0,0],
+ ['A-1008','Karan Malhotra','karanm@yopmail.com','+91 98200 11008',3,[],0,0],
+ ['A-1009','Ananya Rao','ananyar@yopmail.com','+91 98200 11009',2,K('H2','301','B1','B2'),1,1],
+ ['A-1010','Vikram Chauhan','vikramc@yopmail.com','+91 98200 11010',1,K('H2','302','B1'),1,1],
+ ['A-1011','Isha Kapoor','ishak@yopmail.com','+91 98200 11011',5,K('H2','401','B1','B2','M1','M2'),1,1],
+ ['A-1012','Arjun Nair','arjunn@yopmail.com','+91 98200 11012',2,[],0,0],
+ ['A-1013','Meera Joshi','meeraj@yopmail.com','+91 98200 11013',1,[],0,0],
+ ['A-1014','Rahul Verma','rahulv@yopmail.com','+91 98200 11014',2,K('H1','105','B1','B2'),1,1],
+ ['A-1015','Pooja Reddy','poojar@yopmail.com','+91 98200 11015',2,K('H1','105','M1','M2'),1,1],
+ ['A-1016','Siddharth Jain','siddharthj@yopmail.com','+91 98200 11016',1,[],0,0],
+ ['A-1017','Kavya Pillai','kavyap@yopmail.com','+91 98200 11017',3,[],0,0],
+ ['A-1018','Nikhil Bansal','nikhilb@yopmail.com','+91 98200 11018',2,K('H3','D1','B1','B2'),1,1],
+ ['A-1019','Tanya Sharma','tanyas@yopmail.com','+91 98200 11019',1,K('H3','D1','B3'),2,1],
+ ['A-1020','Farhan Qureshi','farhanq@yopmail.com','+91 98200 11020',2,[],0,0],
+ ['A-1021','Divya Menon','divyam@yopmail.com','+91 98200 11021',2,K('H1','106','B1','B2','M1','M2').slice(0,2),1,1],
+ ['A-1022','Harsh Vardhan','harshv@yopmail.com','+91 98200 11022',2,K('H1','106','M1','M2'),1,1],
+ ['A-1023','Ritika Das','ritikad@yopmail.com','+91 98200 11023',4,K('H1','107','B1','B2','M1','M2'),1,1],
+ ['A-1024','Manish Tiwari','manisht@yopmail.com','+91 98200 11024',1,[],0,0],
+ ['A-1025','Zoya Khan','zoyak@yopmail.com','+91 98200 11025',2,[],0,0],
+ ['A-1026','Varun Sethi','varuns@yopmail.com','+91 98200 11026',1,K('H2','302','B2'),1,1],
+].map(([id,name,email,phone,pax,saved,version,notifiedVersion])=>({
+  id,name,email,phone,pax,saved,version,notifiedVersion,
+  checkIn:id==='A-1011'?'2026-10-13':EVENT.checkIn, checkOut:EVENT.checkOut,
+  notifiedAt:notifiedVersion?'2026-09-20T10:30:00':null
+}));
+const byId=id=>ATT.find(a=>a.id===id);
+
+/* ---------------- State ---------------- */
+const PALETTE=['#4f46e5','#0891b2','#059669','#d97706','#db2777','#7c3aed','#dc2626','#0d9488','#65a30d','#9333ea'];
+const S={
+  selected:[],            // ordered ids
+  draft:{},               // id -> {keys:[], in, out}
+  active:null,
+  tab:'all', q:'', hotelFilter:'all',
+  hotelId:'H1', typeId:'DLX', roomQ:'', roomShow:'all', showAllRooms:false,
+  ch:{wa:false,em:true}, pvTab:'wa'
+};
+const color=id=>PALETTE[S.selected.indexOf(id)%PALETTE.length];
+const initials=n=>n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const first=n=>n.split(' ')[0];
+const hotel=id=>HOTELS.find(h=>h.id===id);
+const typeOf=(h,t)=>hotel(h).types.find(x=>x.id===t);
+const sameSet=(a,b)=>a.length===b.length&&[...a].sort().join()===[...b].sort().join();
+const fmtDate=d=>d?new Date(d+'T00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'—';
+const nights=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function status(a){
+  if(a.version>a.notifiedVersion) return 'pending';
+  if(!a.saved.length) return 'un';
+  if(a.saved.length<a.pax) return 'part';
+  return 'ok';
+}
+const STATUS_LABEL={pending:'Changed · not notified',un:'Not assigned',part:'Partly assigned',ok:'Notified'};
+const STATUS_CLASS={pending:'b-pend',un:'b-un',part:'b-part',ok:'b-ok'};
+
+function occ(){ // slot -> attendee id (draft for selected, saved for others)
+  const m={};
+  ATT.forEach(a=>{(S.draft[a.id]?S.draft[a.id].keys:a.saved).forEach(k=>m[k]=a.id)});
+  return m;
+}
+function change(a){
+  const d=S.draft[a.id]; if(!d) return null;
+  const roomsSame=sameSet(d.keys,a.saved);
+  const fields=[];
+  if(!roomsSame) fields.push('rooms');
+  if(d.in!==a.checkIn) fields.push('check_in');
+  if(d.out!==a.checkOut) fields.push('check_out');
+  let action='unchanged';
+  if(!a.saved.length&&d.keys.length) action='create';
+  else if(a.saved.length&&!d.keys.length) action='remove';
+  else if(fields.length) action='update';
+  return {action,fields};
+}
+function allocText(keys){
+  if(!keys.length) return 'Not assigned';
+  const g={};
+  keys.forEach(k=>{const s=SLOT[k];const gk=s.hotelId+'|'+s.roomNo;(g[gk]=g[gk]||{h:s.hotelId,no:s.roomNo,l:[]}).l.push(s.kind==='bed'?'B'+s.sid.slice(1):'M'+s.sid.slice(1))});
+  const groups=Object.values(g);
+  const hotels=[...new Set(groups.map(x=>x.h))];
+  return hotels.map(h=>hotel(h).name+' · '+groups.filter(x=>x.h===h).map(x=>`${x.no} (${x.l.sort().join(', ')})`).join(', ')).join(' + ');
+}
+
+/* ---------------- Selection ---------------- */
+function select(id,on){
+  const a=byId(id);
+  if(on&&!S.selected.includes(id)){
+    S.selected.push(id);
+    S.draft[id]={keys:[...a.saved],in:a.checkIn,out:a.checkOut};
+    if(!S.active) S.active=id;
+    if(S.selected.length===1&&a.saved.length){const s=SLOT[a.saved[0]];S.hotelId=s.hotelId;S.typeId=s.typeId;}
+  } else if(!on&&S.selected.includes(id)){
+    S.selected=S.selected.filter(x=>x!==id); delete S.draft[id];
+    if(S.active===id) S.active=S.selected[0]||null;
+  }
+}
+function nextActive(){
+  const need=S.selected.find(id=>S.draft[id].keys.length<byId(id).pax);
+  if(need) S.active=need;
+}
+
+/* ---------------- Render: list ---------------- */
+function visible(){
+  const q=S.q.trim().toLowerCase();
+  return ATT.filter(a=>{
+    if(S.tab!=='all'&&status(a)!==S.tab) return false;
+    if(S.hotelFilter==='none'&&a.saved.length) return false;
+    if(S.hotelFilter!=='all'&&S.hotelFilter!=='none'&&!a.saved.some(k=>SLOT[k].hotelId===S.hotelFilter)) return false;
+    if(q&&!(a.name+' '+a.email+' '+a.id).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function renderList(){
+  const counts={all:ATT.length,un:0,part:0,pending:0,ok:0};
+  ATT.forEach(a=>counts[status(a)]++);
+  document.getElementById('attCount').textContent=`(${ATT.length})`;
+  const tabs=[['all','All'],['un','Not assigned'],['part','Partly'],['pending','Changed'],['ok','Notified']];
+  document.getElementById('tabs').innerHTML=tabs.map(([k,l])=>`<button class="tab ${S.tab===k?'on':''}" data-tab="${k}">${l}<span class="c">${counts[k]}</span></button>`).join('');
+  const hf=document.getElementById('hotelFilter');
+  hf.innerHTML=`<option value="all">All hotels</option><option value="none">No hotel yet</option>`+HOTELS.map(h=>`<option value="${h.id}">${h.name}</option>`).join('');
+  hf.value=S.hotelFilter;
+  const list=visible();
+  document.getElementById('list').innerHTML=list.length?list.map(a=>{
+    const sel=S.selected.includes(a.id), st=status(a), d=S.draft[a.id], c=d&&change(a);
+    const keys=d?d.keys:a.saved;
+    return `<div class="person ${sel?'sel':''}" data-id="${a.id}" style="${sel?'--pc:'+color(a.id):''}">
+      <input type="checkbox" ${sel?'checked':''} aria-label="Select ${esc(a.name)}">
+      <div class="av" style="${sel?`background:${color(a.id)};color:#fff`:''}">${initials(a.name)}</div>
+      <div style="min-width:0">
+        <div class="pname">${esc(a.name)} <span class="pax" title="People in this booking">${a.pax} ${a.pax>1?'people':'person'}</span></div>
+        <div class="pmeta">${a.id} · ${esc(a.email)}</div>
+        <div class="palloc">${esc(allocText(keys))}</div>
+        <div class="pstatus"><span class="badge ${STATUS_CLASS[st]}">${STATUS_LABEL[st]}</span>
+          ${c&&c.action!=='unchanged'?`<span class="badge b-new">Unsaved edit</span>`:''}</div>
+      </div></div>`}).join(''):`<div class="empty-list">No attendees match. Clear the search or pick another tab.</div>`;
+  const allSel=list.length&&list.every(a=>S.selected.includes(a.id));
+  const sa=document.getElementById('selAll'); sa.checked=allSel; sa.indeterminate=!allSel&&list.some(a=>S.selected.includes(a.id));
+  document.getElementById('selCount').textContent=S.selected.length;
+}
+
+/* ---------------- Render: workspace ---------------- */
+const ICON_BED='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18v-7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7M3 14h18M3 18v2M21 18v2M7 9V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2"/></svg>';
+const ICON_MAT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="10" width="18" height="6" rx="2"/></svg>';
+
+function freeIn(hId,tId,o){
+  let beds=0,rooms=0;
+  ROOMS.filter(r=>r.hotelId===hId&&(!tId||r.typeId===tId)&&!r.blocked).forEach(r=>{
+    const f=r.keys.filter(k=>!o[k]).length; beds+=f; if(f===r.keys.length) rooms++;
+  });
+  return {beds,rooms};
+}
+function renderWs(){
+  const ws=document.getElementById('ws');
+  if(!S.selected.length){
+    ws.innerHTML=`<div class="ws-empty"><div><h2>Pick who you're allocating</h2>
+      <p>Tick one or more attendees on the left. Their current rooms load here so you can assign, move or change them.</p>
+      <div class="steps"><span><b>1</b>Select attendees</span><span><b>2</b>Click beds in a room</span><span><b>3</b>Review and save</span></div></div></div>`;
+    return;
+  }
+  const o=occ();
+  const need=S.selected.reduce((s,id)=>s+byId(id).pax,0);
+  const got=S.selected.reduce((s,id)=>s+S.draft[id].keys.length,0);
+  const act=byId(S.active);
+  const h=hotel(S.hotelId);
+  if(!h.types.some(t=>t.id===S.typeId)) S.typeId=h.types[0].id;
+
+  const guests=S.selected.map(id=>{
+    const a=byId(id),n=S.draft[id].keys.length;
+    return `<button class="guest ${id===S.active?'active':''}" data-guest="${id}" style="--pc:${color(id)}" aria-pressed="${id===S.active}">
+      <div class="av">${initials(a.name)}</div>
+      <div><div class="gn">${esc(a.name)}</div><div class="gcount">${n} of ${a.pax} beds</div><div class="bar"><i style="width:${Math.min(100,n/a.pax*100)}%"></i></div></div>
+      <span class="x" data-unsel="${id}" title="Remove from this batch" role="button" aria-label="Remove ${esc(a.name)}">×</span></button>`;
+  }).join('');
+
+  const hotelsHtml=HOTELS.map(x=>{
+    const f=freeIn(x.id,null,o);
+    const mine=S.selected.reduce((s,id)=>s+S.draft[id].keys.filter(k=>SLOT[k].hotelId===x.id).length,0);
+    return `<button class="hotel ${x.id===S.hotelId?'on':''}" data-hotel="${x.id}">
+      <div class="hn">${x.name}${mine?`<span class="mine" title="Beds of this batch here">${mine} here</span>`:''}</div>
+      <div class="ha">${x.area}</div>
+      <div class="hf ${f.beds<need-got?'low':''}">${f.beds} beds free · ${f.rooms} empty rooms</div></button>`;
+  }).join('');
+
+  const typesHtml=h.types.map(t=>{
+    const f=freeIn(h.id,t.id,o);
+    return `<button class="type ${t.id===S.typeId?'on':''}" data-type="${t.id}"><b>${t.name}</b><span>${t.beds} beds${t.mat?` + ${t.mat} mattress${t.mat>1?'es':''}`:''} · ${f.beds} free</span></button>`;
+  }).join('');
+
+  let rooms=ROOMS.filter(r=>r.hotelId===S.hotelId&&r.typeId===S.typeId);
+  if(S.roomQ) rooms=rooms.filter(r=>String(r.no).toLowerCase().includes(S.roomQ.toLowerCase()));
+  if(S.roomShow==='free') rooms=rooms.filter(r=>!r.blocked&&r.keys.some(k=>!o[k]||S.draft[o[k]]));
+  if(S.roomShow==='empty') rooms=rooms.filter(r=>!r.blocked&&r.keys.every(k=>!o[k]));
+  if(S.roomShow==='batch') rooms=rooms.filter(r=>r.keys.some(k=>o[k]&&S.draft[o[k]]));
+  const total=rooms.length, LIMIT=12;
+  const shown=S.showAllRooms?rooms:rooms.slice(0,LIMIT);
+
+  const roomsHtml=shown.map(r=>{
+    const free=r.blocked?0:r.keys.filter(k=>!o[k]).length;
+    const full=!r.blocked&&free===0;
+    const slots=r.keys.map(k=>{
+      const s=SLOT[k],who=o[k],ic=s.kind==='bed'?ICON_BED:ICON_MAT,short=s.kind==='bed'?'Bed '+s.sid.slice(1):'Mat '+s.sid.slice(1);
+      if(r.blocked) return `<div class="slot block">${ic}${short}</div>`;
+      if(!who) return `<button class="slot free" data-slot="${k}" title="${s.label}: free — click to give to ${esc(act.name)}">${ic}${short}</button>`;
+      const w=byId(who);
+      if(S.draft[who]){
+        const kept=w.saved.includes(k);
+        return `<button class="slot draft ${kept?'kept':''}" data-slot="${k}" style="--pc:${color(who)}" title="${s.label}: ${esc(w.name)}${kept?' (current)':' (new)'} — click to free">${initials(w.name)}<span style="font-weight:500">${short}</span></button>`;
+      }
+      return `<div class="slot other" title="${s.label}: ${esc(w.name)} (not in this batch)">${initials(w.name)}<span style="font-weight:500">${short}</span></div>`;
+    }).join('');
+    const canFill=!r.blocked&&free>0&&act&&S.draft[act.id].keys.length<act.pax;
+    return `<div class="room ${r.blocked?'blocked':full?'full':''}">
+      <div class="room-h"><b>Room ${r.no}</b><span class="rf ${free===r.keys.length&&!r.blocked?'g':''}">${r.blocked?'Maintenance':full?'Full':`${free} of ${r.keys.length} free`}</span></div>
+      <div class="slots">${slots}</div>
+      <div class="room-f">${canFill?`<button class="btn sm" data-fill="${r.hotelId}|${r.no}">Give to ${esc(first(act.name))}</button>`:''}</div></div>`;
+  }).join('')||`<div class="muted">No rooms match this filter.</div>`;
+
+  const allDone=got>=need;
+  ws.innerHTML=`<div class="scroll">
+    <div class="section">
+      <div class="sec-head"><h3>Batch · ${S.selected.length} attendee${S.selected.length>1?'s':''}</h3><span class="hint">Beds you click go to the highlighted person</span></div>
+      <div class="guests">${guests}</div>
+      <div class="need"><span><strong>${got}</strong> of <strong>${need}</strong> beds assigned</span>
+        ${allDone?`<span class="ok">Everyone has a bed</span>`:`<span class="warn">${need-got} still needed</span>`}
+        <div class="actions">
+          <button class="btn sm" id="autoBtn" ${allDone?'disabled':''} title="Fill remaining beds in ${h.name}, keeping each group in one room where possible">Auto-assign in ${h.name}</button>
+          <button class="btn sm ghost-red" id="clearDraft" ${got?'':'disabled'}>Clear beds</button>
+          <button class="btn sm" id="resetDraft" title="Undo unsaved edits">Undo edits</button>
+        </div></div>
+    </div>
+    <div class="section">
+      <div class="sec-head"><h3>Hotel and room type</h3></div>
+      <div class="hotels">${hotelsHtml}</div>
+      <div class="types">${typesHtml}</div>
+    </div>
+    <div class="section">
+      <div class="grid-tools">
+        <input id="roomQ" placeholder="Find room no." value="${esc(S.roomQ)}">
+        <div class="seg">${[['all','All'],['free','Has space'],['empty','Empty'],['batch','This batch']].map(([k,l])=>`<button data-show="${k}" class="${S.roomShow===k?'on':''}">${l}</button>`).join('')}</div>
+        <div class="legend"><span><i style="border:1.5px dashed var(--line-2)"></i>Free</span><span><i style="background:${color(S.active)}"></i>This batch</span><span><i style="background:#e8ecf1"></i>Other attendee</span></div>
+      </div>
+      <div class="rooms">${roomsHtml}</div>
+      ${total>LIMIT?`<button class="btn sm more" id="moreRooms">${S.showAllRooms?'Show fewer rooms':`Show ${total-LIMIT} more rooms`}</button>`:''}
+    </div></div>`;
+}
+
+/* ---------------- Render: summary ---------------- */
+function renderSum(){
+  const el=document.getElementById('sum');
+  const pend=ATT.filter(a=>status(a)==='pending').length;
+  const pb=document.getElementById('pendingBtn');
+  pb.disabled=!pend; pb.innerHTML=`Unsent updates <span class="n">${pend}</span>`;
+  document.getElementById('waLbl').classList.toggle('on',S.ch.wa);
+  document.getElementById('emLbl').classList.toggle('on',S.ch.em);
+
+  if(!S.selected.length){
+    el.innerHTML=`<div class="panel-head"><div class="panel-title">Review and save</div></div>
+      <div class="scroll section"><p class="muted">Changes for the selected attendees show up here before anything is saved or sent.</p>
+      ${pend?`<p class="muted" style="margin-top:12px">${pend} attendee${pend>1?'s have':' has'} saved changes that were never messaged. Use <b>Unsent updates</b> at the top to send them.</p>`:''}</div>`;
+    return;
+  }
+  const d0=S.draft[S.selected[0]];
+  const sameIn=S.selected.every(id=>S.draft[id].in===d0.in), sameOut=S.selected.every(id=>S.draft[id].out===d0.out);
+  const rows=S.selected.map(id=>{
+    const a=byId(id),c=change(a),d=S.draft[id];
+    const lbl={create:['New','b-new'],update:['Updated','b-upd'],remove:['Removed','b-rem'],unchanged:['No change','b-un']}[c.action];
+    const pendingOld=c.action==='unchanged'&&status(a)==='pending';
+    return `<div class="chg"><div class="chg-h"><span class="dot" style="--pc:${color(id)}"></span><b>${esc(a.name)}</b>
+      <span class="badge ${pendingOld?'b-pend':lbl[1]}">${pendingOld?'Not notified yet':lbl[0]}</span></div>
+      ${c.fields.includes('rooms')?`<div class="diff">${a.saved.length?`<span class="old">${esc(allocText(a.saved))}</span><span class="arrow"> → </span>`:''}${esc(allocText(d.keys))}</div>`:`<div class="diff">${esc(allocText(d.keys))}</div>`}
+      ${(c.fields.includes('check_in')||c.fields.includes('check_out'))?`<div class="diff"><span class="old">${fmtDate(a.checkIn)}–${fmtDate(a.checkOut)}</span><span class="arrow"> → </span>${fmtDate(d.in)}–${fmtDate(d.out)}</div>`:''}
+      ${d.keys.length&&d.keys.length<a.pax?`<div class="diff" style="color:var(--amber)">${a.pax-d.keys.length} of ${a.pax} people have no bed yet</div>`:''}
+      ${c.fields.length?`<div class="fields">${c.fields.map(f=>`<span>${f}</span>`).join('')}</div>`:''}</div>`;
+  }).join('');
+
+  const changed=S.selected.filter(id=>change(byId(id)).action!=='unchanged');
+  const pendingSel=S.selected.filter(id=>change(byId(id)).action==='unchanged'&&status(byId(id))==='pending');
+  const toNotify=changed.length+pendingSel.length;
+  const chans=[S.ch.wa&&'WhatsApp',S.ch.em&&'Email'].filter(Boolean);
+
+  // message preview for first relevant attendee
+  const pid=changed[0]||pendingSel[0]||S.selected[0], pa=byId(pid), pd=S.draft[pid], pc=change(pa);
+  const kind=pc.action==='create'?'confirmed':pc.action==='remove'?'cancelled':'updated';
+  const body=pc.action==='remove'
+    ?`Hi ${first(pa.name)}, your hotel booking for Tech Summit 2026 has been cancelled. Reply to this message if you still need a room.`
+    :`Hi ${first(pa.name)}, your stay for Tech Summit 2026 is ${kind}.\n${allocText(pd.keys)}\nCheck-in ${fmtDate(pd.in)}, check-out ${fmtDate(pd.out)} (${nights(pd.in,pd.out)} nights) for ${pa.pax} ${pa.pax>1?'people':'person'}.`;
+  const pvTab=S.ch[S.pvTab]?S.pvTab:(S.ch.wa?'wa':'em');
+
+  el.innerHTML=`<div class="panel-head"><div class="panel-title">Review and save</div></div>
+    <div class="scroll">
+      <div class="section">
+        <div class="sec-head"><h3>Stay dates</h3><span class="hint">${sameIn&&sameOut?'From registration':'Mixed dates'}</span></div>
+        <div class="stay">
+          <label>Check-in<input type="date" id="dIn" value="${sameIn?d0.in:''}"></label>
+          <label>Check-out<input type="date" id="dOut" value="${sameOut?d0.out:''}"></label>
+        </div>
+        <div class="nights">${sameIn&&sameOut?`${nights(d0.in,d0.out)} nights · applies to all ${S.selected.length} selected`:'Pick a date to apply it to everyone selected'}</div>
+      </div>
+      <div class="section">
+        <div class="sec-head"><h3>Changes</h3><span class="hint">${changed.length} of ${S.selected.length} changed</span></div>
+        ${rows}
+      </div>
+      <div class="section">
+        <div class="sec-head"><h3>Message preview</h3><span class="hint">${toNotify?`${toNotify} recipient${toNotify>1?'s':''}`:'Nothing to send'}</span></div>
+        ${chans.length?`<div class="pv-tabs">${S.ch.wa?`<button class="tab ${pvTab==='wa'?'on':''}" data-pv="wa">WhatsApp</button>`:''}${S.ch.em?`<button class="tab ${pvTab==='em'?'on':''}" data-pv="em">Email</button>`:''}</div>
+          <div class="preview ${pvTab==='em'?'email':''}">${pvTab==='em'?`<b>Subject: Your accommodation is ${kind}</b>\n\n`:''}${esc(body)}</div>`
+          :`<p class="muted">No channel ticked at the top, so no message will be sent. You can still save.</p>`}
+      </div>
+    </div>
+    <div class="foot">
+      <div class="row">
+        <button class="btn" id="saveOnly" ${changed.length?'':'disabled'} title="Save rooms. Attendees are flagged as 'Changed · not notified'">Save only</button>
+        <button class="btn teal" id="saveNotify" ${chans.length&&toNotify?'':'disabled'}>${chans.length?`Save and notify`:'Tick a channel to notify'}</button>
+      </div>
+      <div class="explain">${chans.length&&toNotify?`Sends via ${chans.join(' and ')} to ${toNotify} attendee${toNotify>1?'s':''}. Unchanged people get nothing.`:'"Save only" keeps a record that these people still need a message.'}</div>
+      <button class="linkbtn" id="payloadBtn">See what the backend receives</button>
+    </div>`;
+}
+
+function render(){renderList();renderWs();renderSum();}
+
+/* ---------------- Actions ---------------- */
+function clickSlot(k){
+  const o=occ(),who=o[k];
+  if(who&&S.draft[who]){ // free it
+    S.draft[who].keys=S.draft[who].keys.filter(x=>x!==k); S.active=who; render(); return;
+  }
+  if(who) return;
+  const a=byId(S.active),d=S.draft[a.id];
+  if(d.keys.length>=a.pax){
+    const nxt=S.selected.find(id=>S.draft[id].keys.length<byId(id).pax);
+    if(!nxt){toast(`Everyone in this batch already has a bed. Click a coloured bed to free it first.`);return;}
+    S.active=nxt; toast(`${a.name} is full, giving this bed to ${byId(nxt).name}`);
+  }
+  S.draft[S.active].keys.push(k);
+  if(S.draft[S.active].keys.length>=byId(S.active).pax) nextActive();
+  render();
+}
+function fillRoom(hNo){
+  const o=occ(),a=byId(S.active),d=S.draft[a.id];
+  const room=ROOMS.find(r=>r.hotelId+'|'+r.no===hNo);
+  room.keys.filter(k=>!o[k]).slice(0,a.pax-d.keys.length).forEach(k=>d.keys.push(k));
+  nextActive(); render();
+}
+function autoAssign(){
+  let placed=0;
+  S.selected.forEach(id=>{
+    const a=byId(id),d=S.draft[id];
+    let needN=a.pax-d.keys.length; if(needN<=0) return;
+    const o=occ();
+    const pool=ROOMS.filter(r=>r.hotelId===S.hotelId&&!r.blocked)
+      .sort((x,y)=>(x.typeId===S.typeId?0:1)-(y.typeId===S.typeId?0:1))
+      .map(r=>({r,free:r.keys.filter(k=>!o[k])})).filter(x=>x.free.length);
+    // Prefer a room already holding this person, then the tightest room that fits the whole group
+    const mineRoom=pool.find(x=>d.keys.some(k=>x.r.keys.includes(k)));
+    const fit=pool.filter(x=>x.free.length>=needN).sort((x,y)=>x.free.length-y.free.length)[0];
+    const order=[mineRoom,fit,...pool.sort((x,y)=>y.free.length-x.free.length)].filter(Boolean);
+    const used=new Set();
+    for(const x of order){ if(needN<=0) break; if(used.has(x.r)) continue; used.add(x.r);
+      x.free.filter(k=>!d.keys.includes(k)).slice(0,needN).forEach(k=>{d.keys.push(k);needN--;placed++});
+    }
+  });
+  const left=S.selected.reduce((s,id)=>s+byId(id).pax-S.draft[id].keys.length,0);
+  toast(left?`Placed ${placed} beds. ${hotel(S.hotelId).name} is out of space for ${left} more, try another hotel.`:`Placed ${placed} beds in ${hotel(S.hotelId).name}`);
+  nextActive(); render();
+}
+function buildPayload(ids,notify){
+  return {
+    event_id:EVENT.id,
+    requested_at:new Date().toISOString(),
+    notify:{whatsapp:notify&&S.ch.wa,email:notify&&S.ch.em},
+    allocations:ids.map(id=>{
+      const a=byId(id),d=S.draft[id]||{keys:a.saved,in:a.checkIn,out:a.checkOut},c=S.draft[id]?change(a):{action:'unchanged',fields:[]};
+      return {
+        attendee_id:id,
+        action:c.action,                 // create | update | remove | unchanged
+        base_version:a.version,          // server rejects if its copy is newer (someone else edited)
+        changed_fields:c.fields,
+        previous:{beds:a.saved.map(slotOut),check_in:a.checkIn,check_out:a.checkOut},
+        beds:d.keys.map(slotOut),
+        check_in:d.in, check_out:d.out,
+        send_message:notify&&(S.ch.wa||S.ch.em)?(c.action==='unchanged'?'resend_latest':c.action):null
+      };
+    })
+  };
+}
+const slotOut=k=>{const s=SLOT[k];return {hotel_id:s.hotelId,room_type:s.typeId,room_no:String(s.roomNo),slot:s.sid}};
+
+function save(notify){
+  const changed=S.selected.filter(id=>change(byId(id)).action!=='unchanged');
+  const pendingSel=notify?S.selected.filter(id=>change(byId(id)).action==='unchanged'&&status(byId(id))==='pending'):[];
+  const ids=[...changed,...pendingSel];
+  if(!ids.length) return;
+  console.log('POST /allocations/batch',buildPayload(ids,notify));
+  const now=new Date().toISOString();
+  changed.forEach(id=>{const a=byId(id),d=S.draft[id];a.saved=[...d.keys];a.checkIn=d.in;a.checkOut=d.out;a.version++;});
+  if(notify) ids.forEach(id=>{const a=byId(id);a.notifiedVersion=a.version;a.notifiedAt=now;});
+  const chans=[S.ch.wa&&'WhatsApp',S.ch.em&&'Email'].filter(Boolean).join(' and ');
+  toast(notify?`Saved ${changed.length} and notified ${ids.length} via ${chans}`:`Saved ${changed.length}. They're listed under Unsent updates until messaged.`);
+  S.selected=[];S.draft={};S.active=null;
+  render();
+}
+
+/* ---------------- Modals ---------------- */
+function openModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('modalBg').classList.add('show');}
+function closeModal(){document.getElementById('modalBg').classList.remove('show');}
+function showPayload(){
+  const changed=S.selected.filter(id=>change(byId(id)).action!=='unchanged');
+  const ids=changed.length?changed:S.selected;
+  openModal(`<div class="modal-h"><h3>Request sent on save</h3><button class="x-close" data-close>×</button></div>
+    <div class="modal-b">
+      <p class="muted" style="margin-bottom:10px">Each attendee carries an <b>action</b> and <b>changed_fields</b>, so the backend knows who is new, who was edited and what changed. <b>base_version</b> guards against two admins editing the same person. When saved without notifying, the server keeps <code>notified_version</code> behind <code>version</code>, which is what powers "Unsent updates".</p>
+      <pre class="json">${esc(JSON.stringify(buildPayload(ids,S.ch.wa||S.ch.em),null,2))}</pre></div>
+    <div class="modal-f"><button class="btn" data-close>Close</button></div>`);
+}
+function showPending(){
+  const list=ATT.filter(a=>status(a)==='pending');
+  const chans=[S.ch.wa&&'WhatsApp',S.ch.em&&'Email'].filter(Boolean);
+  openModal(`<div class="modal-h"><h3>Unsent updates</h3><button class="x-close" data-close>×</button></div>
+    <div class="modal-b"><p class="muted" style="margin-bottom:6px">These allocations were saved or edited after the last message went out. Attendees still have the old details.</p>
+    ${list.map(a=>`<label class="prow"><input type="checkbox" class="pchk" value="${a.id}" checked>
+      <div class="av">${initials(a.name)}</div>
+      <div><b>${esc(a.name)}</b> <span class="muted">v${a.version}, last notified v${a.notifiedVersion||'—'}</span>
+      <div class="muted">${esc(allocText(a.saved))} · ${fmtDate(a.checkIn)}–${fmtDate(a.checkOut)}</div></div></label>`).join('')}</div>
+    <div class="modal-f"><span class="muted">${chans.length?`Sends via ${chans.join(' and ')}`:'Tick WhatsApp or Email at the top first'}</span>
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn teal" id="sendPending" ${chans.length?'':'disabled'}>Send updates</button></div>`);
+  const sp=document.getElementById('sendPending');
+  sp&&sp.addEventListener('click',()=>{
+    const ids=[...document.querySelectorAll('.pchk:checked')].map(i=>i.value);
+    if(!ids.length) return;
+    console.log('POST /allocations/notify',{event_id:EVENT.id,attendee_ids:ids,notify:{whatsapp:S.ch.wa,email:S.ch.em}});
+    ids.forEach(id=>{const a=byId(id);a.notifiedVersion=a.version;a.notifiedAt=new Date().toISOString();});
+    closeModal();toast(`Sent updates to ${ids.length} via ${chans.join(' and ')}`);render();
+  });
+}
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),3200);}
+
+/* ---------------- Events ---------------- */
+document.getElementById('list').addEventListener('click',e=>{
+  const p=e.target.closest('.person'); if(!p) return;
+  const id=p.dataset.id; select(id,!S.selected.includes(id)); render();
+});
+document.getElementById('tabs').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(t){S.tab=t.dataset.tab;renderList();}});
+document.getElementById('search').addEventListener('input',e=>{S.q=e.target.value;renderList();});
+document.getElementById('hotelFilter').addEventListener('change',e=>{S.hotelFilter=e.target.value;renderList();});
+document.getElementById('selAll').addEventListener('change',e=>{visible().forEach(a=>select(a.id,e.target.checked));render();});
+document.getElementById('clearSel').addEventListener('click',()=>{S.selected=[];S.draft={};S.active=null;render();});
+document.getElementById('chWa').addEventListener('change',e=>{S.ch.wa=e.target.checked;renderSum();});
+document.getElementById('chEm').addEventListener('change',e=>{S.ch.em=e.target.checked;renderSum();});
+document.getElementById('chEm').checked=S.ch.em;
+document.getElementById('pendingBtn').addEventListener('click',showPending);
+
+document.getElementById('ws').addEventListener('click',e=>{
+  const t=e.target;
+  const un=t.closest('[data-unsel]'); if(un){e.stopPropagation();select(un.dataset.unsel,false);render();return;}
+  const g=t.closest('[data-guest]'); if(g){S.active=g.dataset.guest;render();return;}
+  const h=t.closest('[data-hotel]'); if(h){S.hotelId=h.dataset.hotel;S.typeId=hotel(S.hotelId).types[0].id;S.showAllRooms=false;render();return;}
+  const ty=t.closest('[data-type]'); if(ty){S.typeId=ty.dataset.type;S.showAllRooms=false;render();return;}
+  const sl=t.closest('[data-slot]'); if(sl){clickSlot(sl.dataset.slot);return;}
+  const f=t.closest('[data-fill]'); if(f){fillRoom(f.dataset.fill);return;}
+  const sh=t.closest('[data-show]'); if(sh){S.roomShow=sh.dataset.show;renderWs();return;}
+  if(t.closest('#moreRooms')){S.showAllRooms=!S.showAllRooms;renderWs();return;}
+  if(t.closest('#autoBtn')){autoAssign();return;}
+  if(t.closest('#clearDraft')){S.selected.forEach(id=>S.draft[id].keys=[]);S.active=S.selected[0];render();return;}
+  if(t.closest('#resetDraft')){S.selected.forEach(id=>{const a=byId(id);S.draft[id]={keys:[...a.saved],in:a.checkIn,out:a.checkOut}});toast('Unsaved edits undone');render();}
+});
+document.getElementById('ws').addEventListener('input',e=>{
+  if(e.target.id==='roomQ'){S.roomQ=e.target.value;const pos=e.target.selectionStart;renderWs();const i=document.getElementById('roomQ');i.focus();i.setSelectionRange(pos,pos);}
+});
+document.getElementById('sum').addEventListener('change',e=>{
+  if(e.target.id==='dIn'&&e.target.value){S.selected.forEach(id=>S.draft[id].in=e.target.value);render();}
+  if(e.target.id==='dOut'&&e.target.value){S.selected.forEach(id=>S.draft[id].out=e.target.value);render();}
+});
+document.getElementById('sum').addEventListener('click',e=>{
+  const pv=e.target.closest('[data-pv]'); if(pv){S.pvTab=pv.dataset.pv;renderSum();return;}
+  if(e.target.closest('#saveOnly')) save(false);
+  if(e.target.closest('#saveNotify')) save(true);
+  if(e.target.closest('#payloadBtn')) showPayload();
+});
+document.getElementById('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg'||e.target.closest('[data-close]'))closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+render();
+</script>
+</body>
+</html>
